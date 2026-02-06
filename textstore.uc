@@ -8,11 +8,13 @@ import * as node from "node";
 let enabled = false;
 
 const SAVE_INTERVAL = 5 * 60;
-const SYNC_DELAY = 30;
+const SYNC_FIRST_INTERVAL = 5;
+const SYNC_INTERVAL = 10;
 const DEFAULT_STORE_SIZE = 50;
 const stores = {};
 const dirty = {};
 let defaultStoreSize = DEFAULT_STORE_SIZE;
+let syncCount = 3;
 
 function loadStore(namekey)
 {
@@ -80,9 +82,18 @@ function resendMessages(msg)
     else if (start + limit > mlength) {
         limit = mlength - start;
     }
-    for (let i = 0; i < limit; i++) {
-        const tm = messages[start + i];
-        router.queue(message.createMessage(msg.from, null, tm.namekey, "textstore_message", tm,
+    if (limit > 0) {
+        for (let i = 0; i < limit; i++) {
+            const tm = messages[start + i];
+            router.queue(message.createMessage(msg.from, null, resend.namekey, "textstore_message", tm,
+            {
+                hop_start: 0,
+                hop_limit: 0,
+            }));
+        }
+    }
+    else {
+        router.queue(message.createMessage(msg.from, null, resend.namekey, "textstore_message", null,
         {
             hop_start: 0,
             hop_limit: 0,
@@ -132,7 +143,7 @@ export function setup(config)
         }
         timers.setInterval("textstore", SAVE_INTERVAL);
     }
-    timers.setTimeout("messagesync", SYNC_DELAY);
+    timers.setInterval("messagesync", SYNC_FIRST_INTERVAL, SYNC_INTERVAL);
 };
 
 export function tick()
@@ -142,6 +153,10 @@ export function tick()
     }
     if (timers.tick("messagesync")) {
         syncMessages();
+        syncCount--;
+        if (syncCount <= 0) {
+            timers.setInterval("messagesync", -1);
+        }
     }
 };
 
@@ -158,9 +173,12 @@ export function process(msg)
             }
         }
         else if (msg.data.textstore_message) {
-            textmessage.addMessage(msg.data.textstore_message);
-            if (enabled) {
-                addMessage(msg.data.textstore_message);
+            timers.setInterval("messagesync", -1);
+            if (msg.data.textstore_message) {
+                textmessage.addMessage(msg.data.textstore_message);
+                if (enabled) {
+                    addMessage(msg.data.textstore_message);
+                }
             }
         }
     }
