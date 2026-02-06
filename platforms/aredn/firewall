@@ -1,0 +1,8 @@
+nft insert rule inet fw4 input_lan tcp dport 4404 accept
+nft insert rule inet fw4 input_wifi tcp dport 4404 accept
+nft insert rule inet fw4 input_dtdlink tcp dport 4404 accept
+nft insert rule inet fw4 input_vpn tcp dport 4404 accept
+nft insert rule inet fw4 input_lan udp dport 4404 accept
+nft insert rule inet fw4 input_wifi udp dport 4404 accept
+nft insert rule inet fw4 input_dtdlink udp dport 4404 accept
+nft insert rule inet fw4 input_vpn udp dport 4404 accept

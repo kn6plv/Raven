@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+    <head>
+        <meta charset="utf-8">
+        <meta name="format-detection" content="telephone=no,date=no,address=no,email=no,url=no">
+        <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+        <link href="ui.css" rel="stylesheet">
+        <script src="ui.js"></script>
+        <title>Raven Mesh Messaging</title>
+    </head>
+    <body>
+        <div id="all">
+            <div id="header">
+                <div class="raven"></div>
+                <div class="w">
+                    <div>raven</div>
+                    <div class="s">mesh messaging</div>
+                </div>
+            </div>
+            <div id="main">
+                <div id="left">
+                    <div id="channels-container">
+                        <div class="title">Channels<div class="cog" onclick="showNamekey('channel-config')"></div></div>
+                        <div id="channels"></div>
+                    </div>
+                    <div id="nodes-container">
+                        <div class="title">Nodes<input onkeyup="return filterNodes(event)"><div class="mag"></div></div>
+                        <div id="nodes-scroll">
+                            <div id="favorites"></div>
+                            <div id="nodes"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="right">
+                    <div id="rheader"></div>
+                    <div id="texts"></div>
+                    <div id="post">
+                        <textarea placeholder="Message ..." maxlength="200" onkeyup="return sendMessage(event)" onkeypress="return sendMessage(event)" ondragenter="drag(event)" ondragleave="drag(event)" ondrop="sendDrop(event)"></textarea>
+                        <div class="count">0/200</div>
+                    </div>
+                </div>
+            </div>
+            <div id="footer"></div>
+        </div>
+    </body>
+</html>

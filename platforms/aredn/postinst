@@ -1,0 +1,5 @@
+#!/bin/sh
+/etc/init.d/raven enable
+/etc/init.d/raven start
+/usr/local/bin/restart-firewall
+exit 0

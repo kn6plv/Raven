@@ -1,0 +1,28 @@
+{
+    "debug": 1,
+    "role": "client_mute",
+    "meshtastic": {
+        "address": "192.168.1.100"
+    },
+    "ipmesh": {},
+    "location": {
+        "latitude": 37.000,
+        "longitude": -122.000,
+        "altitude": 10,
+        "precision": 15
+    },
+    "platform_debian": {
+        "store": "/tmp/at"
+    },
+    "maxhops": 7,
+    "messages": {},
+    "channels": [
+        { "namekey": "AREDN og==", "telemetry": false },
+        { "namekey": "LongFast AQ==", "telemetry": true, "meshtastic": true }
+    ],
+    "telemetry": {
+        "environmental_weewx": {
+            "url": "http://weewx.home/current_minimal.json"
+        }
+    }
+}

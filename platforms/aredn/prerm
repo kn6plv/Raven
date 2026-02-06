@@ -1,0 +1,4 @@
+#!/bin/sh
+/etc/init.d/raven stop
+/etc/init.d/raven disable
+exit 0

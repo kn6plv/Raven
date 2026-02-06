@@ -1,0 +1,12 @@
+[Unit]
+Description=raven
+Wants=network-online.target
+After=network-online.targe
+
+[Service]
+Type=simple
+StandardOutput=journal
+ExecStart=/root/raven/raven.uc
+
+[Install]
+WantedBy=default.target
