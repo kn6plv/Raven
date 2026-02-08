@@ -127,7 +127,9 @@ export function tick()
                         for (let i = 0; i < length(msgs); i++) {
                             const msg = msgs[i];
                             if (msg.text) {
-                                event.queue(json(msg.text));
+                                const j = json(msg.text);
+                                j.socket = msg.socket;
+                                event.queue(j);
                             }
                             else if (msg.binary) {
                                 event.queue({ cmd: "upload", binary: msg.binary, socket: msg.socket });

@@ -7,6 +7,7 @@ import * as channel from "channel";
 import * as textmessage from "textmessage";
 import * as textstore from "textstore";
 import * as router from "router";
+import * as winlink from "winlink";
 
 const HW_AREDN = 254;
 const q = [];
@@ -113,6 +114,7 @@ export function tick()
                     notify({ cmd: "nodes" });
                     const namekey = channel.getAllChannels()[0].namekey;
                     notify({ cmd: "texts", namekey: namekey }, `texts ${namekey}`);
+                    notify({ cmd: "winmenu" });
                     break;
                 }
                 case "me":
@@ -169,7 +171,7 @@ export function tick()
                 case "channels":
                 {
                     const channels = map(channel.getAllChannels(), c => {
-                        return { namekey: c.namekey, meshtastic: c.meshtastic, telemetry: c.telemetry, state: textmessage.state(c.namekey) };
+                        return { namekey: c.namekey, meshtastic: c.meshtastic, winlink: c.winlink, telemetry: c.telemetry, state: textmessage.state(c.namekey) };
                     });
                     send({ event: msg.cmd, channels: channels });
                     break;
@@ -238,6 +240,16 @@ export function tick()
                 case "ack":
                 {
                     send({ event: msg.cmd, id: msg.id });
+                    break;
+                }
+                case "winmenu":
+                {
+                    send({ event: msg.cmd, menu: winlink.menu() }, msg.socket);
+                    break;
+                }
+                case "winform":
+                {
+                    send({ event: msg.cmd, formdata: winlink.formpost(msg.id) }, msg.socket);
                     break;
                 }
                 default:

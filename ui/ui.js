@@ -1,6 +1,7 @@
 let sock = null;
 let send = () => {};
 let rightSelection = null;
+let previousSelection = null;
 let channels = null;
 let echannels = null;
 let directs = {};
@@ -12,6 +13,7 @@ let updateTextTimeout;
 let dropSelection;
 let replyid;
 let activeFilter;
+let winlink = false;
 const xdiv = document.createElement("div");
 
 const roles = {
@@ -224,6 +226,7 @@ function htmlChannelConfig()
                 <div><input ${e.badge ? "checked" : ""} type="checkbox" oninput="typeChannelBadge(${i}, event.target.checked)"></div>
                 <div><input disabled type="checkbox"></div>
                 <div><input disabled ${e.telemetry ? "checked" : ""} type="checkbox" oninput="typeChannelTelemetry(${i}, event.target.checked)"></div>
+                <div><input disabled type="checkbox"></div>
                 <select disabled><option>new key</option></select>
                 <button onclick="rmChannel(${i})" disabled>-</button>
                 <button onclick="addChannel(${i})" ${e.readonly && ne.readonly ? "disabled" : ""}>+</button>
@@ -236,6 +239,7 @@ function htmlChannelConfig()
             <div><input ${e.badge ? "checked" : ""} type="checkbox" oninput="typeChannelBadge(${i}, event.target.checked)"></div>
             <div><input ${e.images ? "checked" : ""} type="checkbox" oninput="typeChannelImages(${i}, event.target.checked)"></div>
             <div><input ${e.telemetry ? "checked" : ""} type="checkbox" oninput="typeChannelTelemetry(${i}, event.target.checked)"></div>
+            <div><input ${e.winlink ? "checked" : ""} type="checkbox" oninput="typeChannelWinlink(${i}, event.target.checked)"></div>
             <select onchange="genChannelKey(${i}, event.target.value)" ${e.readonly ? "disabled" : ""}>
                 <option>new key</option>
                 <option>1 byte</option>
@@ -256,11 +260,33 @@ function htmlChannelConfig()
                 <div>Notify</div>
                 <div>Images</div>
                 <div>Telemetry</div>
+                <div>Winlink</div>
             </div>
             ${body}
         </div>
         <div class="d"><button onclick="doneChannels()">Done</button></div>
     </div>`;
+}
+
+function htmlWinlinkMenu(menu)
+{
+    let main = "";
+    for (let i = 0; i < menu.length; i++) {
+        const submenu = menu[i][1];
+        let sub = "";
+        for (let j = 0; j < submenu.length; j++) {
+            sub += `<div onclick="showNamekey('winlink-express-form ${menu[i][0]}/${submenu[j]}')">${submenu[j].replace(/_/g, " ")}</div>`;
+        }
+        main += `<div><div>${menu[i][0].replace(/_/g, " ")}</div><div><div>${sub}</div></div></div>`;
+    }
+    return main;
+}
+
+function domWinlink(formdata)
+{
+    const win = N("<div class='winlink'><iframe></iframe><button onclick='winlinkCancel()'>Cancel</button></div>");
+    Q(win, "iframe").srcdoc = formdata;
+    return win;
 }
 
 function updateMe(msg)
@@ -357,13 +383,13 @@ function restartTextsObserver(channel)
                 restartTextsObserver(channel);
             }
         }
-    }, { root: Q("#texts") });
+    }, { root: I("texts") });
 }
 
 function updateTexts(msg)
 {
     clearTimeout(updateTextTimeout);
-    const t = Q("#texts");
+    const t = I("texts");
     texts = msg.texts;
     t.innerHTML = msg.texts.map(t => htmlText(t, useImage(msg.namekey))).join("");
     const channel = getChannel(msg.namekey);
@@ -406,7 +432,10 @@ function updateTexts(msg)
 
 function updateText(msg)
 {
-    const t = Q("#texts");
+    if (texts.find(t => t.id === msg.id)) {
+        return;
+    }
+    const t = I("texts");
     const atbottom = (t.scrollTop > t.scrollHeight - t.clientHeight - 50);
     texts.push(msg.text);
     const n = t.appendChild(N(htmlText(msg.text, useImage(msg.namekey))));
@@ -465,7 +494,7 @@ function sendMessage(event)
     }
     else if (event.key === "Enter" && !event.shiftKey) {
         if (text) {
-            Q("#texts").lastElementChild.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
+            I("texts").lastElementChild.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
             const namekey = rightSelection;
             const rid = replyid;
             setTimeout(_ => send({ cmd: "post", namekey: namekey, text: text.trim(), replyto: rid }), 500);
@@ -514,7 +543,8 @@ function resetPost()
     const t = Q(p, "textarea");
     t.value = "";
     p.style.display = null;
-    if (me.is_unmessagable || rightSelection === "channel-config") {
+    const w = I("winmenu");
+    if (me.is_unmessagable || rightSelection === "channel-config" || rightSelection.indexOf("winlink-express-form ") === 0) {
         p.style.display = "none";
     }
     else if (isDirect(rightSelection)) {
@@ -522,9 +552,11 @@ function resetPost()
         if (nodes[rightSelection.split(" ")[1]]?.is_unmessagable) {
             p.style.display = "none";
         }
+        w.style.display = winlink ? null : "none";
     }
     else {
         t.placeholder = "Message ...";
+        w.style.display = winlink && getChannel(rightSelection)?.state?.winlink ? "" : "none";
     }
 }
 
@@ -615,14 +647,14 @@ function sendDrop(event)
 
 function addChannel(idx)
 {
-    echannels.splice(idx + 1, 0, { name: "", key: "", max: 100, badge: true, images: true, telemetry: false });
-    Q("#texts").innerHTML = htmlChannelConfig();
+    echannels.splice(idx + 1, 0, { name: "", key: "", max: 100, badge: true, images: true, telemetry: false, winlink: false });
+    I("texts").innerHTML = htmlChannelConfig();
 }
 
 function rmChannel(idx)
 {
     echannels.splice(idx, 1);
-    Q("#texts").innerHTML = htmlChannelConfig();
+    I("texts").innerHTML = htmlChannelConfig();
 }
 
 function typeChannelName(idx, value)
@@ -661,7 +693,12 @@ function typeChannelTelemetry(idx, value)
     else {
         echannels.find(c => c.meshtastic).telemetry = true;
     }
-    Q("#texts").innerHTML = htmlChannelConfig();
+    I("texts").innerHTML = htmlChannelConfig();
+}
+
+function typeChannelWinlink(idx, value)
+{
+    echannels[idx].winlink = value;
 }
 
 function genChannelKey(idx, value)
@@ -690,7 +727,7 @@ function genChannelKey(idx, value)
     }
     if (key) {
         echannels[idx].key = bytesToBase64(key);
-        Q("#texts").innerHTML = htmlChannelConfig();
+        I("texts").innerHTML = htmlChannelConfig();
     }
 }
 
@@ -703,10 +740,11 @@ function doneChannels()
             if (e.name.length >= 1 && e.key.length >= 4 && e.name.search(/[ \t]/) === -1 && atob(e.key) && e.max >= 10 && e.max <= 1000) {
                 const namekey = `${e.name} ${e.key}`;
                 const channel = getChannel(namekey) || { meshtastic: false, state: { count: 0, cursor: null, max: 100, badge: true, images: true } };
-                channelnames.push({ namekey: namekey, max: e.max, badge: e.badge, images: e.images, telemetry: e.telemetry });
+                channelnames.push({ namekey: namekey, max: e.max, badge: e.badge, images: e.images, telemetry: e.telemetry, winlink: e.winlink });
                 channel.state.max = e.max;
                 channel.state.badge = e.badge;
                 channel.state.images = e.images;
+                channel.state.winlink = e.winlink;
                 channel.telemetry = e.telemetry;
                 nchannels.push({ namekey: namekey, telemetry: channel.telemetry, meshtastic: channel.meshtastic, state: channel.state });
             }
@@ -717,6 +755,48 @@ function doneChannels()
     updateChannels({ channels: nchannels });
     showNamekey(channelnames[0].namekey);
     send({ cmd: "newchannels", channels: channelnames });
+}
+
+function winlinkMenuShow()
+{
+    I("winmenu").classList.add("active");
+}
+
+function winlinkMenuHide()
+{
+    I("winmenu").classList.remove("active");
+}
+
+function winlinkMenu(msg)
+{
+    if (msg.menu.length) {
+        const menus = Q("#winmenu .menus");
+        menus.innerHTML = htmlWinlinkMenu(msg.menu);
+        winlink = true;
+    }
+}
+
+function winlinkForm(msg)
+{
+    const texts = I("texts");
+    texts.textContent = null;
+    clearTimeout(updateTextTimeout);
+    texts.appendChild(domWinlink(msg.formdata));
+}
+
+function winlinkCancel()
+{
+    showNamekey(previousSelection);
+}
+
+function winlinkSubmit(form)
+{
+    const chan = getChannel(previousSelection);
+    if (chan?.state?.winlink) {
+        const namekey = previousSelection;
+        //setTimeout(_ => send({ cmd: "post", namekey: namekey, text: data.trim() }), 500);
+    }
+    showNamekey(previousSelection);
 }
 
 function filterNodes(event)
@@ -746,10 +826,11 @@ function showNamekey(namekey)
 {
     if (namekey == rightSelection) {
         if (getChannel(namekey)) {
-            Q("#texts").lastElementChild.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
+            I("texts").lastElementChild.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
         }
     }
     else {
+        previousSelection = rightSelection;
         rightSelection = namekey;
         updateChannels();
         const selected = Q("#nodes-container .node.selected");
@@ -770,10 +851,16 @@ function showNamekey(namekey)
                     max: c.state.max,
                     badge: c.state.badge,
                     images: useImage(c.namekey),
-                    telemetry: c.telemetry
+                    telemetry: c.telemetry,
+                    winlink: c.state.winlink
                 });
             });
-            Q("#texts").innerHTML = htmlChannelConfig();
+            I("texts").innerHTML = htmlChannelConfig();
+        }
+        else if (namekey.indexOf("winlink-express-form ") === 0) {
+            send({ cmd: "winform", id: namekey.substr(21) });
+            clearTimeout(updateTextTimeout);
+            updateTextTimeout = setTimeout(_ => I("texts").innerHTML = "", 500);
         }
         else {
             if (isDirect(namekey)) {
@@ -783,7 +870,7 @@ function showNamekey(namekey)
             }
             send({ cmd: "texts", namekey: namekey });
             clearTimeout(updateTextTimeout);
-            updateTextTimeout = setTimeout(_ => Q("#texts").innerHTML = "", 500);
+            updateTextTimeout = setTimeout(_ => I("texts").innerHTML = "", 500);
         }
     }
 }
@@ -866,7 +953,7 @@ function startup()
                     Q("#post textarea").placeholder = "Message ...";
                     if (useImage(dropSelection)) {
                         const hostname = location.hostname.indexOf(".local.mesh") == -1 ? `${location.hostname}.local.mesh` : location.hostname;
-                        Q("#texts").lastElementChild.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
+                        I("texts").lastElementChild.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
                         setTimeout(_ => send({ cmd: "post", namekey: dropSelection, text: `http://${hostname}/cgi-bin/apps/raven/image?i=${msg.name}` }), 500);
                     }
                     break;
@@ -879,6 +966,13 @@ function startup()
                     }
                     break;
                 }
+                case "winmenu":
+                    winlinkMenu(msg);
+                    resetPost();
+                    break;
+                case "winform":
+                    winlinkForm(msg);
+                    break;
                 default:
                     break;
             }

@@ -12,6 +12,7 @@ const PORT = 4403;
 
 const BITFIELD_MQTT_OKAY = 1;
 const TRANSPORT_MECHANISM_MULTICAST_UDP = 6;
+const MAX_TEXT_MESSAGE_LENGTH = 200;
 
 let s = null;
 
@@ -197,7 +198,7 @@ function encodePacket(msg)
     const data = msg.data;
     if (data.text_message) {
         data.portnum = 1;
-        data.payload = data.text_message;
+        data.payload = substr(data.text_message, 0, MAX_TEXT_MESSAGE_LENGTH);
         delete data.text_message;
     }
     else {

@@ -9,7 +9,6 @@ let enabled = false;
 
 const MAX_MESSAGES = 100;
 const SAVE_INTERVAL = 5 * 60;
-const MAX_TEXT_MESSAGE_LENGTH = 200;
 
 const channelmessages = {};
 const channelmessagesdirty = {};
@@ -24,7 +23,8 @@ function loadMessages(namekey)
             cursor: null,
             messages: [],
             badge: true,
-            images: true
+            images: true,
+            winlink: false
         };
         platform.badge(`messages.${namekey}`, channelmessages[namekey].badge ? channelmessages[namekey].count : 0);
     }
@@ -103,7 +103,7 @@ export function createMessage(to, namekey, text, replyto)
     if (replyto) {
         extra.data = { reply_id: int(split(replyto, ":")[1]) };
     }
-    const msg = message.createMessage(to, null, namekey, "text_message", substr(text, 0, MAX_TEXT_MESSAGE_LENGTH), extra);
+    const msg = message.createMessage(to, null, namekey, "text_message", text, extra);
     addMessage(msg);
     return msg;
 };
@@ -115,7 +115,7 @@ export function catchUpMessagesTo(namekey, id)
         cm.cursor = id;
         saveMessages(namekey, cm);
     }
-    return { count: cm.count, cursor: cm.cursor, max: cm.max, badge: cm.badge, images: cm.images };
+    return { count: cm.count, cursor: cm.cursor, max: cm.max, badge: cm.badge, images: cm.images, winlink: cm.winlink };
 };
 
 export function updateSettings(channels)
@@ -126,6 +126,7 @@ export function updateSettings(channels)
         cm.badge = channel.badge;
         cm.max = channel.max;
         cm.images = channel.images;
+        cm.winlink = channel.winlink;
         saveMessages(channel.namekey, cm);
     }
 };
@@ -164,7 +165,7 @@ export function createDirectMessage(to, text, replyto)
         extra.data = { reply_id: int(split(replyto, ":")[1]) };
     }
     const id = int(split(to, " ")[1]);
-    const msg = message.createMessage(id, null, null, "text_message", substr(text, 0, MAX_TEXT_MESSAGE_LENGTH), extra);
+    const msg = message.createMessage(id, null, null, "text_message", text, extra);
     addDirectMessage(msg);
     return msg;
 };
@@ -172,7 +173,7 @@ export function createDirectMessage(to, text, replyto)
 export function state(namekey)
 {
     const cm = loadMessages(namekey);
-    return { count: cm.count, cursor: cm.cursor, max: cm.max, badge: cm.badge, images: cm.images };
+    return { count: cm.count, cursor: cm.cursor, max: cm.max, badge: cm.badge, images: cm.images, winlink: cm.winlink };
 };
 
 export function setup(config)

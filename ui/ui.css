@@ -4,17 +4,17 @@
     --font-family: sans-serif;
     --default-fg-color: #000000;
     --body-bg-color: #f8f8f8;
-    --container-background-color: white;
-    --container-title-background-color: white;
+    --container-bg-color: white;
+    --container-title-bg-color: white;
     --container-border-color: grey;
     --filter-border-color: grey;
-    --text-background-color: white;
+    --text-bg-color: white;
     --text-border-color: black;
     --text-date-color: #606060;
     --text-reply-color: darkblue;
     --text-reply-border-color: darkblue;
     --text-reply-label-color: grey;
-    --logo-background-color: white;
+    --logo-bg-color: white;
     --logo-border-color: white;
     --light-filter: none;
     --map-filter: none;
@@ -24,18 +24,23 @@
     --post-drop-border-color: green;
     --post-font-size: 16px;
     --post-count-color: grey;
-    --unread-background-color: seagreen;
+    --unread-bg-color: seagreen;
     --unread-color: white;
-    --channel-selected-background-color: #f0f0f0;
-    --channel-hover-background-color: #e8e8e8;
-    --node-selected-background-color: #f0f0f0;
-    --node-hover-background-color: #e8e8e8;
+    --channel-selected-bg-color: #f0f0f0;
+    --channel-hover-bg-color: #e8e8e8;
+    --node-selected-bg-color: #f0f0f0;
+    --node-hover-bg-color: #e8e8e8;
     --link-color: #0040c0;
-    --config-table-even-background-color: #f8f8f8;
+    --config-table-even-bg-color: #f8f8f8;
     --config-table-separator-color: #d0d0d0;
     --config-subtitle-color: #808080;
     --invalid-text-color: #800000;
     --disabled-text-color: #808080;
+    --menu-bg-color: white;
+    --menu-fg-color: black;
+    --menu-placeholder-color: #202020;
+    --menu-border-color: grey;
+    --menu-hover-bg-color: #e8e8e8;
 }
 @media (prefers-color-scheme: dark)
 {
@@ -43,17 +48,17 @@
 {
     --default-fg-color: #d0d0d0;
     --body-bg-color: #181818;
-    --container-background-color: #202020;
-    --container-title-background-color: #202020;
+    --container-bg-color: #202020;
+    --container-title-bg-color: #202020;
     --container-border-color: grey;
     --filter-border-color: #606060;
-    --text-background-color: #202020;
+    --text-bg-color: #202020;
     --text-border-color: #d0d0d0;
     --text-date-color: #a0a0a0;
     --text-reply-color: lightblue;
     --text-reply-border-color: lightblue;
     --text-reply-label-color: grey;
-    --logo-background-color: #202020;
+    --logo-bg-color: #202020;
     --logo-border-color: #202020;
     --light-filter: invert(86%) sepia(86%) saturate(38%) hue-rotate(322deg) brightness(116%) contrast(69%);
     --map-filter: grayscale(100%) invert(100%);
@@ -62,18 +67,23 @@
     --post-border-color: grey;
     --post-drop-border-color: green;
     --post-count-color: grey;
-    --unread-background-color: seagreen;
+    --unread-bg-color: seagreen;
     --unread-color: #303030;
-    --channel-selected-background-color: #383838;
-    --channel-hover-background-color: #404040;
-    --node-selected-background-color: #383838;
-    --node-hover-background-color: #404040;
+    --channel-selected-bg-color: #383838;
+    --channel-hover-bg-color: #404040;
+    --node-selected-bg-color: #383838;
+    --node-hover-bg-color: #404040;
     --link-color: #70a0ff;
-    --config-table-even-background-color: #282828;
+    --config-table-even-bg-color: #282828;
     --config-table-separator-color: #606060;
     --config-subtitle-color: #808080;
     --invalid-text-color: #800000;
     --disabled-text-color: #808080;
+    --menu-bg-color: black;
+    --menu-fg-color: white;
+    --menu-placeholder-color: #c0c0c0;
+    --menu-border-color: grey;
+    --menu-hover-bg-color: #404040;
 }
 }
 *
@@ -165,7 +175,7 @@ a
     min-height: 200px;
     margin: 10px 10px 10px 0;
     padding-top: 30px;
-    background-color: var(--container-background-color);
+    background-color: var(--container-bg-color);
     border: 1px solid var(--container-border-color);
     border-radius: 14px;
     overflow: hidden;
@@ -183,7 +193,7 @@ a
     overflow: hidden;
     margin-right: 10px;
     padding-top: 30px;
-    background-color: var(--container-background-color);
+    background-color: var(--container-bg-color);
     border: 1px solid var(--container-border-color);
     border-radius: 14px;
 }
@@ -213,7 +223,7 @@ a
     border: 1px solid var(--container-border-color);
     border-top-right-radius: 14px;
     border-top-left-radius: 14px;
-    background-color: var(--container-title-background-color);
+    background-color: var(--container-title-bg-color);
     z-index: 1;
     font-size: 18px;
 }
@@ -235,11 +245,11 @@ a
 #nodes-container .node:hover,
 #nodes-container .node.selected:hover
 {
-    background-color: var(--node-hover-background-color);
+    background-color: var(--node-hover-bg-color);
 }
 #nodes-container .node.selected
 {
-    background-color: var(--node-selected-background-color);
+    background-color: var(--node-selected-bg-color);
 }
 #texts
 {
@@ -252,18 +262,21 @@ a
 #post
 {
     position: relative;
-    padding: 0 20px 0 10px;
+    margin: 10px 20px 0 10px;
+    padding: 10px 15px 35px 10px;
+    border: 1px solid var(--post-border-color);
+    border-radius: var(--post-font-size);
+    background-color: var(--post-bg-color);
 }
 #post textarea
 {
     width: 100%;
-    height: 90px;
+    height: 46px;
     color: var(--post-text-color);
     background-color: var(--post-bg-color);
     font-size: var(--post-font-size);
-    padding: 10px 60px 10px 10px;
-    border: 1px solid var(--post-border-color);
-    border-radius: var(--post-font-size);
+    border: 0;
+    
     outline: none;
     resize: none;
 }
@@ -278,7 +291,7 @@ a
 #post .count
 {
     position: absolute;
-    right: 26px;
+    right: 6px;
     bottom: 6px;
     font-size: 14px;
     color: var(--post-count-color);
@@ -330,11 +343,11 @@ a
 .channel:hover,
 .channel.selected:hover
 {
-    background-color: var(--channel-hover-background-color);
+    background-color: var(--channel-hover-bg-color);
 }
 .channel.selected
 {
-    background-color: var(--channel-selected-background-color);
+    background-color: var(--channel-selected-bg-color);
 }
 .channel .n
 {
@@ -362,7 +375,7 @@ a
     padding: 0 5px;
     border-radius: 12px;
     color: var(--unread-color);
-    background-color: var(--unread-background-color);
+    background-color: var(--unread-bg-color);
     font-weight: bold;
 }
 .channel .unread:empty
@@ -426,7 +439,7 @@ a
     padding: 0 5px;
     border-radius: 12px;
     color: var(--unread-color);
-    background-color: var(--unread-background-color);
+    background-color: var(--unread-bg-color);
     font-weight: bold;
 }
 .node .unread:empty
@@ -525,7 +538,7 @@ a
     margin: 2px 6px 2px 6px;
     padding: 8px 10px;
     border-radius: 17px;
-    background-color: var(--text-background-color);
+    background-color: var(--text-bg-color);
     white-space: pre-wrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -590,12 +603,13 @@ a
 {
     right: 0px;
 }
-.config
+.config,
+.winlink
 {
     height: 100%;
     border: 1px solid var(--container-border-color);
     border-radius: var(--post-font-size);
-    background-color: var(--container-background-color);
+    background-color: var(--container-bg-color);
     flex-direction: column;
 }
 .config .t
@@ -639,7 +653,8 @@ a
 }
 .config .b .ct div:nth-child(4),
 .config .b .ct div:nth-child(5),
-.config .b .ct div:nth-child(6)
+.config .b .ct div:nth-child(6),
+.config .b .ct div:nth-child(7)
 {
     width: 44px;
     justify-content: center;
@@ -650,7 +665,7 @@ a
 }
 .config .b .c:nth-child(even)
 {
-    background-color: var(--config-table-even-background-color);
+    background-color: var(--config-table-even-bg-color);
 }
 .config .b .c:not(:last-child)
 {
@@ -741,7 +756,7 @@ a
     padding: 10px;
     border: 1px solid var(--container-border-color);
     border-radius: 14px;
-    background-color: var(--container-background-color);
+    background-color: var(--container-bg-color);
 }
 .node-detail .node
 {
@@ -787,7 +802,7 @@ a
 }
 .node-detail .map .overlay:hover
 {
-    border: 1px solid var(--node-hover-background-color);
+    border: 1px solid var(--node-hover-bg-color);
     border-radius: 10px;
 }
 
@@ -796,7 +811,7 @@ a
     position: absolute;
     width: 20px;
     height: 20px;
-    background-color: var(--logo-background-color);
+    background-color: var(--logo-bg-color);
     background-position: center center;
     background-repeat: no-repeat;
     border: 1px solid var(--logo-border-color);
@@ -858,4 +873,101 @@ a
 .star.true
 {
     background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6"><path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clip-rule="evenodd" /></svg>') !important;
+}
+
+#winmenu
+{
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    flex-direction: column-reverse;
+    color: var(--menu-fg-color);
+}
+#winmenu button
+{
+    display: block;
+    width: 60px;
+    color: var(--menu-placeholder-color);
+    background: var(--menu-bg-color);
+    border: 1px solid var(--menu-border-color);
+    border-radius: 7px;
+}
+#winmenu button:hover
+{
+    background-color: var(--menu-hover-bg-color);
+}
+#winmenu.active:hover .menus,
+#winmenu .menus > div:hover > div:last-child
+{
+    display: flex;
+}
+#winmenu .menus
+{
+    display: none;
+    bottom: 20px;
+    padding: 20px;
+    flex-direction: column;
+    background-color: var(--menu-bg-color);
+    border: 1px solid var(--menu-border-color);
+    border-radius: 10px;
+}
+#winmenu .menus > div
+{
+    position: relative;
+    align-items: end;
+}
+#winmenu .menus > div > div:first-child
+{
+    margin: 0 -20px;
+    padding: 5px 25px;
+    white-space: nowrap;
+}
+#winmenu .menus > div > div:first-child:hover
+{
+    background-color: var(--menu-hover-bg-color);
+}
+#winmenu .menus > div > div:last-child
+{
+    position: relative;
+    display: none;
+}
+#winmenu .menus > div > div:last-child > div
+{
+    position: absolute;
+    bottom: -20px;
+    padding: 20px 10px;
+    flex-direction: column;
+    background-color: var(--menu-bg-color);
+    border: 1px solid var(--menu-border-color);
+    border-radius: 10px;
+    flex-direction: column;
+}
+#winmenu .menus > div > div:last-child > div > div
+{
+    margin: 0 -10px;
+    padding: 5px 15px;
+    white-space: nowrap;
+}
+#winmenu .menus > div > div:last-child > div > div:hover
+{
+    background-color: var(--menu-hover-bg-color);
+}
+.winlink
+{
+    padding: 10px;
+}
+.winlink iframe
+{
+    width: 100%;
+    border: 0;
+    border-radius: 10px;
+    flex: 1;
+    background-color: white;
+}
+.winlink button
+{
+    display: block;
+    width: 100px;
+    padding: 5px;
+    margin: 5px;
 }

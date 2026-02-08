@@ -20,6 +20,7 @@ import * as device from "telemetry_device";
 import * as environmental_weewx from "telemetry_environmental_weewx";
 import * as airquality_purpleair from "telemetry_airquality_purpleair";
 import * as power from "telemetry_power";
+import * as winlink from "winlink";
 
 let bconfig;
 let config;
@@ -194,6 +195,9 @@ export function setup()
 
     favorite.setup(config);
     router.registerApp(favorite);
+
+    winlink.setup(config);
+    router.registerApp(winlink);
 
     platform.publish(node.getInfo(), channel.getAllChannels());
 

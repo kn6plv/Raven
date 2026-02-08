@@ -30,6 +30,11 @@ let rootdir = "/tmp/raven";
     return data ? json(data) : null;
 }
 
+/* export */ function loadbinary(name)
+{
+    return fs.readfile(`${rootdir}/${name}`);
+}
+
 /* export */ function store(name, data)
 {
     fs.writefile(`${rootdir}/${name}.json`, sprintf("%.02J", data));
@@ -38,6 +43,11 @@ let rootdir = "/tmp/raven";
 /* export */ function storebinary(name, data)
 {
     fs.writefile(`${rootdir}/${name}.json`, data);
+}
+
+/* export */ function dirtree()
+{
+    return [];
 }
 
 /* export */ function fetch(url, timeout)
@@ -109,8 +119,10 @@ return {
     shutdown,
     mergePlatformConfig,
     load,
+    loadbinary,
     store,
     storebinary,
+    dirtree,
     fetch,
     getTargetsByIdAndNamekey,
     getTargetById,

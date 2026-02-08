@@ -41,6 +41,7 @@ let maxBinarySize = 1 * 1024 * 1024;
         fs.mkdir(p);
     }
     mkdirp("/usr/local/raven/data");
+    mkdirp("/usr/local/raven/winlink/forms");
     mkdirp("/tmp/apps/raven/images");
 
     const c = uci.cursor();
@@ -140,6 +141,9 @@ function path(name)
     if (index(name, "img") === 0) {
         return `/tmp/apps/raven/images/${name}`;
     }
+    if (index(name, "winlink/") === 0) {
+        return `/usr/local/raven/${name}`;
+    }
     return `/usr/local/raven/data/${replace(name, /\//g, "_")}.json`;
 }
 
@@ -154,6 +158,24 @@ function path(name)
     }
     try {
         return json(fs.readfile(`${p}~`));
+    }
+    catch (_) {
+        fs.unlink(`${p}~`);
+    }
+    return null;
+}
+
+/* export */ function loadbinary(name)
+{
+    const p = path(name);
+    try {
+        return fs.readfile(p);
+    }
+    catch (_) {
+        fs.unlink(p);
+    }
+    try {
+        return fs.readfile(`${p}~`);
     }
     catch (_) {
         fs.unlink(`${p}~`);
@@ -190,6 +212,22 @@ function path(name)
         fs.unlink(`${dirname}/${dir[i].f}`);
     }
     fs.writefile(p, data);
+}
+
+/* export */ function dirtree(name)
+{
+    function read(dir)
+    {
+        const r = {};
+        const files = fs.lsdir(dir);
+        for (let i = 0; i < length(files); i++) {
+            const n = files[i];
+            const dn = `${dir}/${n}`;
+            r[n] = fs.lstat(dn)?.type === "directory" ? read(dn) : true;
+        }
+        return r;
+    }
+    return read(path(name));
 }
 
 /* export */ function fetch(url, timeout)
@@ -395,8 +433,10 @@ return {
     shutdown,
     mergePlatformConfig,
     load,
+    loadbinary,
     store,
     storebinary,
+    dirtree,
     fetch,
     getTargetsByIdAndNamekey,
     getTargetById,
