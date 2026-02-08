@@ -31,7 +31,12 @@ function setTimer(name, delay, timeout)
                 break;
         }
     }
-    timers[name] = { next: clock()[0] + delay, timeout: timeout };
+    if (delay === -1) {
+        delete timers[name];
+    }
+    else {
+        timers[name] = { next: clock()[0] + delay, timeout: timeout };
+    }
 }
 
 export function setInterval(name, delay, timeout)
