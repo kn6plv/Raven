@@ -782,6 +782,26 @@ function winlinkForm(msg)
     texts.textContent = null;
     clearTimeout(updateTextTimeout);
     texts.appendChild(domWinlink(msg.formdata));
+    const win = Q(texts, "iframe").contentWindow;
+    function fixup()
+    {
+        const anchors = win.document.querySelectorAll("a");
+        if (anchors.length) {
+            for (let i = 0; i < anchors.length; i++) {
+                const href = anchors[i].getAttribute("href");
+                if (href[0] === "#") {
+                    anchors[i].addEventListener("click", e => {
+                        win.location.hash = href;
+                        e.preventDefault();
+                    });
+                }
+            }
+        }
+        else {
+            setTimeout(fixup, 10);
+        }
+    }
+    fixup();
 }
 
 function winlinkCancel()
