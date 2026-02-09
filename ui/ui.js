@@ -372,12 +372,25 @@ function updateNode(msg)
     }
 }
 
+function updateTitle()
+{
+    let count = 0;
+    for (let i = 0; i < channels.length; i++) {
+        count += channels[i].state.count;
+    }
+    for (let i in directs) {
+        count += directs[i].state.count;
+    }
+    document.title = `Raven Mesh Messaging${count > 0 ? " (" + count + " unread)" : ""}`;
+}
+
 function updateChannels(msg)
 {
     if (msg) {
         channels = msg.channels;
     }
-    Q("#channels").innerHTML = channels.map(c => htmlChannel(c)).join("");
+    I("channels").innerHTML = channels.map(c => htmlChannel(c)).join("");
+    updateTitle();
 }
 
 function getChannelUnread(channel)
@@ -404,6 +417,7 @@ function restartTextsObserver(channel)
         });
         if (newest) {
             getChannelUnread(channel).innerText = (channel.state.count > 0 ? channel.state.count : "");
+            updateTitle();
             send({ cmd: "catchup", namekey: channel.namekey, id: channel.state.cursor });
             if (textObs.root.lastElementChild.id === channel.state.cursor) {
                 restartTextsObserver(channel);
@@ -415,12 +429,13 @@ function restartTextsObserver(channel)
 function updateTexts(msg)
 {
     clearTimeout(updateTextTimeout);
+    const channel = getChannel(msg.namekey);
+    channel.state = msg.state;
+    resetPost();
     const t = I("texts");
     texts = msg.texts;
     t.innerHTML = msg.texts.map(t => htmlText(t, useImage(msg.namekey))).join("");
-    const channel = getChannel(msg.namekey);
     restartTextsObserver(channel);
-    channel.state = msg.state;
     if (channel.state.cursor) {
         I(channel.state.cursor).scrollIntoView({ behavior: "instant", block: "end", inline: "nearest" });
         for (let txt = t.firstElementChild; txt; txt = txt.nextSibling) {
@@ -454,7 +469,7 @@ function updateTexts(msg)
         }
     }
     getChannelUnread(channel).innerText = (channel.state.count > 0 ? channel.state.count : "");
-    resetPost();
+    updateTitle();
 }
 
 function updateText(msg)
@@ -475,6 +490,7 @@ function updateText(msg)
         const channel = getChannel(msg.namekey);
         channel.state.count++;
         getChannelUnread(channel).innerText = channel.state.count;
+        updateTitle();
     }
 }
 
@@ -487,6 +503,7 @@ function updateState(msg)
     if (channel) {
         channel.state = msg.state;
         getChannelUnread(channel).innerText = (channel.state.count > 0 ? channel.state.count : "");
+        updateTitle();
     }
 }
 
