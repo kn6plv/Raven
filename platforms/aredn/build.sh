@@ -55,6 +55,9 @@ cp $SRC/platforms/aredn/upgrade.conf $ROOT/data/etc/arednsysupgrade.d/KN6PLV.rav
 
 chmod 755 $ROOT/data/www/apps/raven/* $ROOT/data/www/cgi-bin/apps/raven/admin $ROOT/data/www/cgi-bin/apps/raven/image
 
+mkdir -p $ROOT/data/usr/local/raven/winlink/forms
+cp -R $SRC/winlink/forms/* $ROOT/data/usr/local/raven/winlink/forms
+
 (cd $ROOT/control ; tar cfz ../control.tar.gz .)
 (cd $ROOT/data ; tar cfz ../data.tar.gz .)
 (cd $ROOT ; tar cfz raven_${VERSION}_all.ipk control.tar.gz data.tar.gz debian-binary)
