@@ -252,6 +252,33 @@ export function tick()
                     send({ event: msg.cmd, formdata: winlink.formpost(msg.id) }, msg.socket);
                     break;
                 }
+                case "winshow":
+                {
+                    try {
+                        const data = json(textmessage.getMessage(msg.namekey, msg.id)?.text)?.winlink;
+                        if (data) {
+                            send({ event: msg.cmd, formdata: winlink.formshow(data.id, data.data) }, msg.socket);
+                        }
+                    }
+                    catch (_) {
+                    }
+                    break;
+                }
+                case "winpost":
+                {
+                    let tmsg;
+                    const text = winlink.post(msg.id, msg.data);
+                    if (channel.isDirect(msg.namekey)) {
+                        tmsg = textmessage.createDirectMessage(msg.namekey, text);
+                    }
+                    else if (channel.getLocalChannelByNameKey(msg.namekey)) {
+                       tmsg = textmessage.createMessage(null, msg.namekey, text);
+                    }
+                    if (tmsg) {
+                        router.queue(tmsg);
+                    }
+                    break;
+                }
                 default:
                     break;
             }

@@ -182,14 +182,33 @@ function htmlText(text, useimage)
             reply = `<div class="r"><div>${T(r.text.replace(/\n/g," "))}</div></div>`;
         }
     }
+    let json = null;
+    try {
+        if (text.text[0] === "{") {
+            json = JSON.parse(text.text);
+        }
+    }
+    catch (_) {
+    }
     const txt = T(text.text);
     let textmsg = null;
-    const img = txt.match(/^(http:\/\/[^\.]+\.local\.mesh\/cgi-bin\/apps\/raven\/image\?i=.+)$/);
-    if (img && useimage) {
-        textmsg = `<div class="b"><div class="i"><a target="_blank" href="${img[1]}"><img loading="lazy" src="${img[1]}" onerror="this.src='/apps/raven/ix.png'"></a></div></div>`;
+    if (json) {
+        switch (Object.keys(json)[0]) {
+            case "winlink":
+                textmsg = `<div class="b"><div class="ack ${text.ack ? 'true' : ''}"></div><div class="w" onclick="showNamekey('winlink-express-show ${text.id}')"><div class="i">Winlink</div><span>${json.winlink.id}</span></div></div>`;
+                break;
+            default:
+                break;
+        }
     }
-    else {
-        textmsg = `<div class="b"><div class="ack ${text.ack ? 'true' : ''}"></div><div class="t">` + txt.replace(/https?:\/\/[^ \t<]+/g, v => `<a target="_blank" href="${v}">${v}</a>`) + '</div><a href="#" class="re" onclick="setupReply(event)">Reply</a></div>';
+    if (!textmsg) {
+        const img = txt.match(/^(http:\/\/[^\.]+\.local\.mesh\/cgi-bin\/apps\/raven\/image\?i=.+)$/);
+        if (img && useimage) {
+            textmsg = `<div class="b"><div class="i"><a target="_blank" href="${img[1]}"><img loading="lazy" src="${img[1]}" onerror="this.src='/apps/raven/ix.png'"></a></div></div>`;
+        }
+        else {
+            textmsg = `<div class="b"><div class="ack ${text.ack ? 'true' : ''}"></div><div class="t">` + txt.replace(/https?:\/\/[^ \t<]+/g, v => `<a target="_blank" href="${v}">${v}</a>`) + '</div><a href="#" class="re" onclick="setupReply(event)">Reply</a></div>';
+        }
     }
     return `<div id="${text.id}" class="text ${n.num == me.num ? 'right ' : ''}${n.hw ? n.hw : ''}">
         ${reply}
@@ -275,9 +294,9 @@ function htmlWinlinkMenu(menu)
         const submenu = menu[i][1];
         let sub = "";
         for (let j = 0; j < submenu.length; j++) {
-            sub += `<div onclick="showNamekey('winlink-express-form ${menu[i][0]}/${submenu[j]}')">${submenu[j].replace(/_/g, " ")}</div>`;
+            sub += `<div onclick="showNamekey('winlink-express-form ${menu[i][0]}/${submenu[j]}')">${submenu[j]}</div>`;
         }
-        main += `<div><div>${menu[i][0].replace(/_/g, " ")}</div><div><div>${sub}</div></div></div>`;
+        main += `<div><div>${menu[i][0]}</div><div><div>${sub}</div></div></div>`;
     }
     return main;
 }
@@ -544,7 +563,7 @@ function resetPost()
     t.value = "";
     p.style.display = null;
     const w = I("winmenu");
-    if (me.is_unmessagable || rightSelection === "channel-config" || rightSelection.indexOf("winlink-express-form ") === 0) {
+    if (me.is_unmessagable || rightSelection === "channel-config" || rightSelection.indexOf("winlink-express-") === 0) {
         p.style.display = "none";
     }
     else if (isDirect(rightSelection)) {
@@ -776,7 +795,7 @@ function winlinkMenu(msg)
     }
 }
 
-function winlinkForm(msg)
+function winlinkFormCreate(msg)
 {
     const texts = I("texts");
     texts.textContent = null;
@@ -797,6 +816,11 @@ function winlinkForm(msg)
                 }
             }
         }
+        const form = win.document.querySelector("form");
+        if (form) {
+            form.removeAttribute("action");
+            form.setAttribute("onsubmit", "formDataToObject(event.target);window.top.winlinkSubmit(document.getElementById('parseme').value)");
+        }
         else {
             setTimeout(fixup, 10);
         }
@@ -804,17 +828,26 @@ function winlinkForm(msg)
     fixup();
 }
 
+function winlinkFormShow(msg)
+{
+    const texts = I("texts");
+    texts.textContent = null;
+    clearTimeout(updateTextTimeout);
+    texts.appendChild(domWinlink(msg.formdata));
+}
+
 function winlinkCancel()
 {
     showNamekey(previousSelection);
 }
 
-function winlinkSubmit(form)
+function winlinkSubmit(formdata)
 {
     const chan = getChannel(previousSelection);
     if (chan?.state?.winlink) {
         const namekey = previousSelection;
-        //setTimeout(_ => send({ cmd: "post", namekey: namekey, text: data.trim() }), 500);
+        const form = rightSelection.substr(21);
+        setTimeout(_ => send({ cmd: "winpost", namekey: namekey, id: form, data: JSON.parse(formdata) }), 500);
     }
     showNamekey(previousSelection);
 }
@@ -878,7 +911,12 @@ function showNamekey(namekey)
             I("texts").innerHTML = htmlChannelConfig();
         }
         else if (namekey.indexOf("winlink-express-form ") === 0) {
-            send({ cmd: "winform", id: namekey.substr(21) });
+            send({ cmd: "winform", namekey: previousSelection, id: namekey.substr(21) });
+            clearTimeout(updateTextTimeout);
+            updateTextTimeout = setTimeout(_ => I("texts").innerHTML = "", 500);
+        }
+        else if (namekey.indexOf("winlink-express-show ") === 0) {
+            send({ cmd: "winshow", namekey: previousSelection, id: namekey.substr(21) });
             clearTimeout(updateTextTimeout);
             updateTextTimeout = setTimeout(_ => I("texts").innerHTML = "", 500);
         }
@@ -991,7 +1029,10 @@ function startup()
                     resetPost();
                     break;
                 case "winform":
-                    winlinkForm(msg);
+                    winlinkFormCreate(msg);
+                    break;
+                case "winshow":
+                    winlinkFormShow(msg);
                     break;
                 default:
                     break;
