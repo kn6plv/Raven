@@ -24,7 +24,7 @@ function loadMessages(namekey)
             messages: [],
             badge: true,
             images: true,
-            winlink: false
+            winlink: channel.isDirect(namekey)
         };
         platform.badge(`messages.${namekey}`, channelmessages[namekey].badge ? channelmessages[namekey].count : 0);
     }

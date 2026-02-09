@@ -13,7 +13,7 @@ let updateTextTimeout;
 let dropSelection;
 let replyid;
 let activeFilter;
-let winlink = false;
+let winlink = null;
 const xdiv = document.createElement("div");
 
 const roles = {
@@ -81,7 +81,10 @@ function addDirect(namekey)
             namekey: namekey,
             state: {
                 count: 0,
-                cursor: null
+                cursor: null,
+                badge: true,
+                images: true,
+                winlink: true
             }
         };
     }
@@ -195,7 +198,11 @@ function htmlText(text, useimage)
     if (json) {
         switch (Object.keys(json)[0]) {
             case "winlink":
-                textmsg = `<div class="b"><div class="ack ${text.ack ? 'true' : ''}"></div><div class="w" onclick="showNamekey('winlink-express-show ${text.id}')"><div class="i">Winlink</div><span>${json.winlink.id}</span></div></div>`;
+                let show = "";
+                if (winlink && winlink[json.winlink.id]) {
+                    show = `onclick="showNamekey('winlink-express-show ${text.id}')"`;
+                }
+                textmsg = `<div class="b"><div class="ack ${text.ack ? 'true' : ''}"></div><div class="w" ${show}><div class="i">Winlink</div><span>${json.winlink.id}</span></div></div>`;
                 break;
             default:
                 break;
@@ -447,6 +454,7 @@ function updateTexts(msg)
         }
     }
     getChannelUnread(channel).innerText = (channel.state.count > 0 ? channel.state.count : "");
+    resetPost();
 }
 
 function updateText(msg)
@@ -571,11 +579,11 @@ function resetPost()
         if (nodes[rightSelection.split(" ")[1]]?.is_unmessagable) {
             p.style.display = "none";
         }
-        w.style.display = winlink ? null : "none";
+        w.style.display = winlink && getChannel(rightSelection)?.state?.winlink ? null : "none";
     }
     else {
         t.placeholder = "Message ...";
-        w.style.display = winlink && getChannel(rightSelection)?.state?.winlink ? "" : "none";
+        w.style.display = winlink && getChannel(rightSelection)?.state?.winlink ? null : "none";
     }
 }
 
@@ -791,7 +799,13 @@ function winlinkMenu(msg)
     if (msg.menu.length) {
         const menus = Q("#winmenu .menus");
         menus.innerHTML = htmlWinlinkMenu(msg.menu);
-        winlink = true;
+        winlink = {};
+        for (let i = 0; i < msg.menu.length; i++) {
+            const submenu = msg.menu[i][1];
+            for (let j = 0; j < submenu.length; j++) {
+                winlink[`${msg.menu[i][0]}/${submenu[j]}`] = true;
+            }
+        }
     }
 }
 
@@ -801,6 +815,7 @@ function winlinkFormCreate(msg)
     texts.textContent = null;
     clearTimeout(updateTextTimeout);
     texts.appendChild(domWinlink(msg.formdata));
+    resetPost();
     const win = Q(texts, "iframe").contentWindow;
     function fixup()
     {
@@ -833,6 +848,7 @@ function winlinkFormShow(msg)
     const texts = I("texts");
     texts.textContent = null;
     clearTimeout(updateTextTimeout);
+    resetPost();
     texts.appendChild(domWinlink(msg.formdata));
 }
 
@@ -891,7 +907,6 @@ function showNamekey(namekey)
             selected.classList.remove("selected");
         }
         Q("#rheader").innerHTML = "";
-        resetPost();
         if (namekey === "channel-config") {
             echannels = [];
             channels.forEach((c, i) => {
@@ -909,26 +924,28 @@ function showNamekey(namekey)
                 });
             });
             I("texts").innerHTML = htmlChannelConfig();
-        }
-        else if (namekey.indexOf("winlink-express-form ") === 0) {
-            send({ cmd: "winform", namekey: previousSelection, id: namekey.substr(21) });
-            clearTimeout(updateTextTimeout);
-            updateTextTimeout = setTimeout(_ => I("texts").innerHTML = "", 500);
-        }
-        else if (namekey.indexOf("winlink-express-show ") === 0) {
-            send({ cmd: "winshow", namekey: previousSelection, id: namekey.substr(21) });
-            clearTimeout(updateTextTimeout);
-            updateTextTimeout = setTimeout(_ => I("texts").innerHTML = "", 500);
+            resetPost();
         }
         else {
-            if (isDirect(namekey)) {
-                addDirect(namekey);
-                send({ cmd: "fullnode", id: namekey.split(" ")[1] });
-                Q(`[data-namekey="${namekey}"]`).classList.add("selected");
+            if (namekey.indexOf("winlink-express-form ") === 0) {
+                send({ cmd: "winform", namekey: previousSelection, id: namekey.substr(21) });
             }
-            send({ cmd: "texts", namekey: namekey });
+            else if (namekey.indexOf("winlink-express-show ") === 0) {
+                send({ cmd: "winshow", namekey: previousSelection, id: namekey.substr(21) });
+            }
+            else {
+                if (isDirect(namekey)) {
+                    addDirect(namekey);
+                    send({ cmd: "fullnode", id: namekey.split(" ")[1] });
+                    Q(`[data-namekey="${namekey}"]`).classList.add("selected");
+                }
+                send({ cmd: "texts", namekey: namekey });
+            }
             clearTimeout(updateTextTimeout);
-            updateTextTimeout = setTimeout(_ => I("texts").innerHTML = "", 500);
+            updateTextTimeout = setTimeout(_ => {
+                I("texts").innerHTML = "";
+                resetPost();
+            }, 500);
         }
     }
 }

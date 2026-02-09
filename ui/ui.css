@@ -549,11 +549,11 @@ a
     display: flex;
     align-items: center;
 }
-.text .w:hover
+.text .w[onclick]:hover
 {
     cursor: pointer;
 }
-.text .w:hover span
+.text .w[onclick]:hover span
 {
     text-decoration: underline;
 }

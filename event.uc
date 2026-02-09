@@ -249,7 +249,10 @@ export function tick()
                 }
                 case "winform":
                 {
-                    send({ event: msg.cmd, formdata: winlink.formpost(msg.id) }, msg.socket);
+                    const formdata = winlink.formpost(msg.id);
+                    if (formdata) {
+                        send({ event: msg.cmd, formdata: formdata }, msg.socket);
+                    }
                     break;
                 }
                 case "winshow":
@@ -257,7 +260,10 @@ export function tick()
                     try {
                         const data = json(textmessage.getMessage(msg.namekey, msg.id)?.text)?.winlink;
                         if (data) {
-                            send({ event: msg.cmd, formdata: winlink.formshow(data.id, data.data) }, msg.socket);
+                            const formdata = winlink.formshow(data.id, data.data);
+                            if (formdata) {
+                                send({ event: msg.cmd, formdata: formdata }, msg.socket);
+                            }
                         }
                     }
                     catch (_) {
