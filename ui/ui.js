@@ -202,7 +202,7 @@ function htmlText(text, useimage)
                 if (winlink && winlink[json.winlink.id]) {
                     show = `onclick="showNamekey('winlink-express-show ${text.id}')"`;
                 }
-                textmsg = `<div class="b"><div class="ack ${text.ack ? 'true' : ''}"></div><div class="w" ${show}><div class="i">Winlink</div><span>${json.winlink.id}</span></div></div>`;
+                textmsg = `<div class="b"><div class="ack ${text.ack ? 'true' : ''}"></div><div class="w" ${show}><div class="i">Winlink</div><span>${json.winlink.id.replace("/", " | ")}</span></div></div>`;
                 break;
             default:
                 break;
