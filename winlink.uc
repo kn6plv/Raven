@@ -14,13 +14,13 @@ export function formpost(id)
     const me = node.getInfo();
     const loc = node.getLocation(true);
    
-    data = replace(data, /\{MsgSender\}/ig, `${split(me.long_name, "-")[0]}`);
-    data = replace(data, /\{SeqNum\}/ig, "");
-    data = replace(data, /\{Latitude\}/ig, `${loc.lat}`);
-    data = replace(data, /\{Longitude\}/ig, `${loc.lon}`);
-    data = replace(data, /\{GridSquare\}/ig, "");
-    data = replace(data, /\{GPS_SIGNED_DECIMAL\}/ig, "(Not available)");
-    data = replace(data, /\{Location_Source\}/ig, "SPECIFIED");
+    data = replace(data, /\{(var )?MsgSender\}/ig, `${split(me.long_name, "-")[0]}`);
+    data = replace(data, /\{(var )?SeqNum\}/ig, "");
+    data = replace(data, /\{(var )?Latitude\}/ig, `${loc.lat}`);
+    data = replace(data, /\{(var )?Longitude\}/ig, `${loc.lon}`);
+    data = replace(data, /\{(var )?GridSquare\}/ig, "");
+    data = replace(data, /\{(var )?GPS_SIGNED_DECIMAL\}/ig, "(Not available)");
+    data = replace(data, /\{(var )?Location_Source\}/ig, "SPECIFIED");
     
     return data;
 };
@@ -47,11 +47,15 @@ export function post(id, formdata)
     if (!keys) {
         return;
     }
+    const lformdata = {};
+    for (let key in formdata) {
+        lformdata[lc(key)] = formdata[key];
+    }
     const nformdata = {};
     for (let i = 0; i < length(keys); i++) {
         const key = keys[i];
-        if (formdata[key] !== null && formdata[key] !== "") {
-            nformdata[key] = formdata[key];
+        if (lformdata[key] !== null && lformdata[key] !== "") {
+            nformdata[key] = lformdata[key];
         }
     }
     return sprintf("%J", { winlink: { id: id, data: nformdata } });
@@ -75,7 +79,7 @@ export function setup(config)
                     if (txt) {
                         const formdata = match(split(txt, "\n", 2)[0], /^Form:([^,]+),(.+)$/);
                         if (formdata) {
-                            const keys = map(match(txt, /<var ([^>]+)>/g), k => k[1]);
+                            const keys = map(match(txt, /<var ([^>]+)>/g), k => lc(k[1]));
                             const root = substr(file, 0, -4);
                             forms[`${dir}/${root}`] = { post: `${dir}/${trim(formdata[1])}`, view: `${dir}/${trim(formdata[2])}`, keys: keys };
                             push(items, root);

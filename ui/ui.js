@@ -851,25 +851,29 @@ function winlinkFormCreate(msg)
                 }
             }
         }
+        const onclick = win.document.querySelectorAll("[onclick]");
+        if (onclick.length) {
+            for (let i = 0; i < onclick.length; i++) {
+                const m = onclick[i].getAttribute("onclick").match("location.href='(.+)'");
+                if (m) {
+                    onclick[i].addEventListener("click", e => {
+                        win.location.hash = m[1];
+                        e.preventDefault();
+                    });
+                    onclick[i].removeAttribute("onclick");
+                }
+            }
+        }
         const form = win.document.querySelector("form");
         if (form) {
             form.removeAttribute("action");
             form.setAttribute("onsubmit", "formDataToObject(event.target);window.top.winlinkSubmit(document.getElementById('parseme').value)");
         }
-        else {
+        if (!win.document.querySelector("div")) {
             setTimeout(fixup, 10);
         }
     }
     fixup();
-}
-
-function winlinkFormShow(msg)
-{
-    const texts = I("texts");
-    texts.textContent = null;
-    clearTimeout(updateTextTimeout);
-    resetPost();
-    texts.appendChild(domWinlink(msg.formdata));
 }
 
 function winlinkCancel()
@@ -1066,10 +1070,8 @@ function startup()
                     resetPost();
                     break;
                 case "winform":
-                    winlinkFormCreate(msg);
-                    break;
                 case "winshow":
-                    winlinkFormShow(msg);
+                    winlinkFormCreate(msg);
                     break;
                 default:
                     break;
