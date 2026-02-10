@@ -377,7 +377,9 @@ function updateTitle()
 {
     let count = 0;
     for (let i = 0; i < channels.length; i++) {
-        count += channels[i].state.count;
+        if (channels[i].state.badge) {
+            count += channels[i].state.count;
+        }
     }
     for (let i in directs) {
         count += directs[i].state.count;
