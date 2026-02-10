@@ -982,7 +982,7 @@ function restartup()
         }
         sock = null;
         send = () => {};
-        setTimeout(startup, 10000);
+        setTimeout(startup, 2000);
     }
 }
 
