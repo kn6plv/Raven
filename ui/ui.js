@@ -829,7 +829,7 @@ function winlinkMenu(msg)
     }
 }
 
-function winlinkFormCreate(msg)
+function winlinkFormDisplay(msg)
 {
     const texts = I("texts");
     texts.textContent = null;
@@ -839,38 +839,14 @@ function winlinkFormCreate(msg)
     const win = Q(texts, "iframe").contentWindow;
     function fixup()
     {
-        const anchors = win.document.querySelectorAll("a");
-        if (anchors.length) {
-            for (let i = 0; i < anchors.length; i++) {
-                const href = anchors[i].getAttribute("href");
-                if (href[0] === "#") {
-                    anchors[i].addEventListener("click", e => {
-                        win.location.hash = href;
-                        e.preventDefault();
-                    });
-                }
-            }
-        }
-        const onclick = win.document.querySelectorAll("[onclick]");
-        if (onclick.length) {
-            for (let i = 0; i < onclick.length; i++) {
-                const m = onclick[i].getAttribute("onclick").match("location.href='(.+)'");
-                if (m) {
-                    onclick[i].addEventListener("click", e => {
-                        win.location.hash = m[1];
-                        e.preventDefault();
-                    });
-                    onclick[i].removeAttribute("onclick");
-                }
-            }
+        if (!win.document.querySelector("div")) {
+            setTimeout(fixup, 10);
+            return;
         }
         const form = win.document.querySelector("form");
         if (form) {
             form.removeAttribute("action");
             form.setAttribute("onsubmit", "formDataToObject(event.target);window.top.winlinkSubmit(document.getElementById('parseme').value)");
-        }
-        if (!win.document.querySelector("div")) {
-            setTimeout(fixup, 10);
         }
     }
     fixup();
@@ -1071,7 +1047,7 @@ function startup()
                     break;
                 case "winform":
                 case "winshow":
-                    winlinkFormCreate(msg);
+                    winlinkFormDisplay(msg);
                     break;
                 default:
                     break;

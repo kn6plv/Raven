@@ -14,6 +14,7 @@ export function formpost(id)
     const me = node.getInfo();
     const loc = node.getLocation(true);
    
+    data = replace(data, /<head>/, `<head><base href="about:srcdoc">`);
     data = replace(data, /\{(var )?MsgSender\}/ig, `${split(me.long_name, "-")[0]}`);
     data = replace(data, /\{(var )?SeqNum\}/ig, "");
     data = replace(data, /\{(var )?Latitude\}/ig, `${loc.lat}`);
@@ -32,6 +33,7 @@ export function formshow(id, formdata)
         return null;
     }
 
+    data = replace(data, /<head>/, `<head><base href='about:srcdoc'>`);
     for (let key in formdata)
     {
         data = replace(data, regexp(`\\{var ${key}\\}`, "ig"), formdata[key]);
