@@ -1,6 +1,6 @@
 #! /bin/sh
 
-VERSION=0.0.1
+VERSION=0.0.1-r$(($(date +%s) - $(date -d "2026-01-01 00:00:00" +%s)))
 
 ROOT=/tmp/raven-build-$$
 SRC=$(dirname $0)/../..
@@ -62,5 +62,6 @@ cp -R $SRC/winlink/forms/* $ROOT/data/usr/local/raven/winlink/forms
 (cd $ROOT/data ; tar cfz ../data.tar.gz .)
 (cd $ROOT ; tar cfz raven_${VERSION}_all.ipk control.tar.gz data.tar.gz debian-binary)
 
+rm -f ./raven_*_all.ipk
 mv $ROOT/raven_${VERSION}_all.ipk .
 rm -rf $ROOT/
