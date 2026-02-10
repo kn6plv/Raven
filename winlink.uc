@@ -19,7 +19,7 @@ export function formpost(id)
     data = replace(data, /\{Latitude\}/ig, `${loc.lat}`);
     data = replace(data, /\{Longitude\}/ig, `${loc.lon}`);
     data = replace(data, /\{GridSquare\}/ig, "");
-    data = replace(data, /\{GPS_SIGNED_DECIMAL\}/ig, "");
+    data = replace(data, /\{GPS_SIGNED_DECIMAL\}/ig, "? ?");
     data = replace(data, /\{Location_Source\}/ig, "SPECIFIED");
     
     return data;
