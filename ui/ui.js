@@ -319,12 +319,12 @@ function updateMe(msg)
 {
     me = nodeExpand(msg.node);
     nodes[me.num] = me;
-    Q("#post").style.display = me.is_unmessagable ? "none" : null;
+    I("post").style.display = me.is_unmessagable ? "none" : null;
 }
 
 function updateNodes(msg)
 {
-    Q("#nodes").innerHTML = msg.nodes.map(n => {
+    I("nodes").innerHTML = msg.nodes.map(n => {
         n = nodeExpand(n);
         nodes[n.num] = n
         return htmlNode(n);
@@ -333,7 +333,7 @@ function updateNodes(msg)
 
 function updateFavorites(msg)
 {
-    Q("#favorites").innerHTML = msg.nodes.map(n => {
+    I("favorites").innerHTML = msg.nodes.map(n => {
         n = nodeExpand(n);
         nodes[n.num] = n
         return htmlNode(n);
@@ -345,7 +345,7 @@ function updateNode(msg)
     const node = nodeExpand(msg.node);
     nodes[node.num] = node;
     const nd = N(htmlNode(node));
-    const nl = msg.node.favorite ? Q("#favorites") : Q("#nodes");
+    const nl = msg.node.favorite ? I("favorites") : I("nodes");
     if (document.visibilityState == "hidden") {
         const n = I(msg.node.id);
         if (n) {
@@ -360,13 +360,14 @@ function updateNode(msg)
         }
         else {
             nl.insertBefore(nd, nl.firstElementChild);
-            const c = Q("#nodes-scroll").getBoundingClientRect();
+            const s = I("nodes-scroll");
+            const c = s.getBoundingClientRect();
             const r = nd.getBoundingClientRect();
             if (r.bottom >= c.top && r.top < c.bottom) {
                 nd.classList.add("fade");
             }
             else {
-                nl.scrollTop += nd.offsetHeight;
+                s.scrollTop += nd.offsetHeight;
             }
         }
     }
@@ -509,7 +510,7 @@ function updateState(msg)
 
 function updateNodeDetails(node)
 {
-    Q("#rheader").innerHTML = htmlNodeDetail(node);
+    I("rheader").innerHTML = htmlNodeDetail(node);
 }
 
 function toggleFav(event, nodenum)
@@ -561,7 +562,7 @@ function setupReply(event)
     const tt = t.closest(".text");
     tt.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
     replyid = tt.id;
-    const p = Q("#post");
+    const p = I("post");
     const n = N(`<div class="rt"><div>${t.innerText}</div></div>`);
     if (p.firstElementChild.nodeName == "DIV") {
         p.firstElementChild.remove();
@@ -580,7 +581,7 @@ function setupReply(event)
 function resetPost()
 {
     replyid = null;
-    const p = Q("#post");
+    const p = I("post");
     if (p.firstElementChild.nodeName == "DIV") {
         p.firstElementChild.remove();
     }
@@ -923,7 +924,7 @@ function showNamekey(namekey)
         if (selected) {
             selected.classList.remove("selected");
         }
-        Q("#rheader").innerHTML = "";
+        I("rheader").innerHTML = "";
         if (namekey === "channel-config") {
             echannels = [];
             channels.forEach((c, i) => {
