@@ -11,8 +11,6 @@ import * as nodedb from "nodedb";
 import * as nodeinfo from "nodeinfo";
 import * as textmessage from "textmessage";
 import * as position from "position";
-import * as favorite from "favorite";
-import * as storeandforward from "storeandforward";
 import * as neighborinfo from "neighborinfo";
 import * as traceroute from "traceroute";
 import * as textstore from "textstore";
@@ -174,8 +172,6 @@ export function setup()
     router.registerApp(device);
     neighborinfo.setup(config);
     router.registerApp(neighborinfo);
-    storeandforward.setup(config);
-    router.registerApp(storeandforward);
     channel.setup(config);
     router.registerApp(channel);
     textstore.setup(config);
@@ -192,9 +188,6 @@ export function setup()
 
     power.setup(config);
     router.registerApp(power);
-
-    favorite.setup(config);
-    router.registerApp(favorite);
 
     winlink.setup(config);
     router.registerApp(winlink);
