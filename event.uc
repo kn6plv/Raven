@@ -215,10 +215,10 @@ export function tick()
                 {
                     let tmsg;
                     if (channel.isDirect(msg.namekey)) {
-                        tmsg = textmessage.createDirectMessage(msg.namekey, msg.text, msg.replyto);
+                        tmsg = textmessage.createDirectMessage(msg.namekey, msg.text, null, msg.replyto);
                     }
                     else if (channel.getLocalChannelByNameKey(msg.namekey)) {
-                       tmsg = textmessage.createMessage(null, msg.namekey, msg.text, msg.replyto);
+                       tmsg = textmessage.createMessage(null, msg.namekey, msg.text, null, msg.replyto);
                     }
                     if (tmsg) {
                         router.queue(tmsg);
@@ -275,10 +275,10 @@ export function tick()
                     let tmsg;
                     const text = winlink.post(msg.id, msg.data);
                     if (channel.isDirect(msg.namekey)) {
-                        tmsg = textmessage.createDirectMessage(msg.namekey, text);
+                        tmsg = textmessage.createDirectMessage(msg.namekey, text, null);
                     }
                     else if (channel.getLocalChannelByNameKey(msg.namekey)) {
-                       tmsg = textmessage.createMessage(null, msg.namekey, text);
+                       tmsg = textmessage.createMessage(null, msg.namekey, text, null);
                     }
                     if (tmsg) {
                         router.queue(tmsg);

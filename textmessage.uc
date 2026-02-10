@@ -70,6 +70,7 @@ export function addMessage(msg)
             from: msg.from,
             when: msg.rx_time,
             text: msg.data.text_message,
+            structuredtext: msg.data.structured_text_message,
             replyid: msg.data.reply_id
         });
         saveMessages(msg.namekey, chanmessages);
@@ -97,11 +98,16 @@ export function getMessage(namekey, id)
     return null;
 };
 
-export function createMessage(to, namekey, text, replyto)
+export function createMessage(to, namekey, text, structuredtext, replyto)
 {
-    const extra = {};
+    const extra = {
+        data: {}
+    };
     if (replyto) {
-        extra.data = { reply_id: int(split(replyto, ":")[1]) };
+        extra.data.reply_id = int(split(replyto, ":")[1]);
+    }
+    if (structuredtext) {
+        extra.data.structured_text_message = structuredtext;
     }
     const msg = message.createMessage(to, null, namekey, "text_message", text, extra);
     addMessage(msg);
@@ -155,14 +161,18 @@ function addDirectMessage(msg)
     addMessage(msg);
 }
 
-export function createDirectMessage(to, text, replyto)
+export function createDirectMessage(to, text, structuredtext, replyto)
 {
     const extra = {
         namekey: to,
-        want_ack: true
+        want_ack: true,
+        data: {}
     };
     if (replyto) {
-        extra.data = { reply_id: int(split(replyto, ":")[1]) };
+        extra.data.reply_id = int(split(replyto, ":")[1]);
+    }
+    if (structuredtext) {
+        extra.data.structured_text_message = structuredtext;
     }
     const id = int(split(to, " ")[1]);
     const msg = message.createMessage(id, null, null, "text_message", text, extra);
