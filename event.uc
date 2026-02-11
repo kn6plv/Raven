@@ -279,6 +279,11 @@ export function tick()
                     }
                     break;
                 }
+                case "ping":
+                {
+                    send({ event: "pong" });
+                    break;
+                }
                 default:
                     break;
             }
