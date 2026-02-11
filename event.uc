@@ -13,17 +13,22 @@ const HW_AREDN = 254;
 const q = [];
 let merge = {};
 let update = null;
+let activity = false;
 
 export function setup(config)
 {
     update = config.update;
     timers.setInterval("event", 0, 10 * 60);
+    timers.setInterval("keepalive", 60);
 };
 
 function send(msg, to)
 {
     DEBUG1("send ", msg, "\n");
     websocket.send(to, sprintf("%J", msg));
+    if (!to) {
+        activity = true;
+    }
 }
 
 export function queue(msg)
@@ -281,7 +286,7 @@ export function tick()
                 }
                 case "ping":
                 {
-                    send({ event: "pong" });
+                    send({ event: "pong" }, msg.socket);
                     break;
                 }
                 default:
@@ -289,6 +294,12 @@ export function tick()
             }
         }
         merge = {};
+    }
+    if (timers.tick("keepalive")) {
+        if (!activity) {
+            send({ event: "beat" });
+        }
+        activity = false;
     }
 };
 

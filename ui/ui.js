@@ -14,7 +14,7 @@ let dropSelection;
 let replyid;
 let activeFilter;
 let winlink = null;
-let keepalivetimer = null;
+let activityTimeout;
 const xdiv = document.createElement("div");
 
 const roles = {
@@ -942,15 +942,6 @@ function showNamekey(namekey)
     }
 }
 
-function keepalive()
-{
-    clearTimeout(keepalivetimer);
-    keepalivetimer = setTimeout(_ => {
-        send({ cmd: "ping" });
-        keepalive();
-    }, 60 * 1000);
-}
-
 function restartup()
 {
     if (sock) {
@@ -963,25 +954,28 @@ function restartup()
         }
         sock = null;
         send = () => {};
-        clearTimeout(keepalivetimer);
         setTimeout(startup, 2000);
     }
+}
+
+function activity()
+{
+    clearTimeout(activityTimeout);
+    activityTimeout = setTimeout(restartup, 70 * 1000);
 }
 
 function startup()
 {
     sock = new WebSocket(`ws://${location.hostname}:4404`);
     sock.addEventListener("open", _ => {
-        send = (msg) => {
-            keepalive();
-            sock.send(msg instanceof Blob ? msg : JSON.stringify(msg));
-        }
+        activity();
+        send = (msg) => sock.send(msg instanceof Blob ? msg : JSON.stringify(msg));
     });
     sock.addEventListener("close", restartup);
     sock.addEventListener("error", restartup);
     sock.addEventListener("message", e => {
+        activity();
         try {
-            keepalive();
             const msg = JSON.parse(e.data);
             switch (msg.event) {
                 case "me":
@@ -1055,7 +1049,7 @@ function startup()
                 case "winshow":
                     winlinkFormDisplay(msg);
                     break;
-                case "pong":
+                case "beat":
                     break;
                 default:
                     break;
