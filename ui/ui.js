@@ -185,37 +185,24 @@ function htmlText(text, useimage)
             reply = `<div class="r"><div>${T(r.text.replace(/\n/g," "))}</div></div>`;
         }
     }
-    let json = null;
-    try {
-        if (text.text[0] === "{") {
-            json = JSON.parse(text.text);
-        }
-    }
-    catch (_) {
-    }
-    const txt = T(text.text);
     let textmsg = null;
-    if (json) {
-        switch (Object.keys(json)[0]) {
-            case "winlink":
-                let show = "";
-                if (winlink && winlink[json.winlink.id]) {
-                    show = `onclick="showNamekey('winlink-express-show ${text.id}')"`;
-                }
-                textmsg = `<div class="b"><div class="ack ${text.ack ? 'true' : ''}"></div><div class="w" ${show}><div class="i">Winlink</div><span>${json.winlink.id.replace("/", " | ")}</span></div></div>`;
-                break;
-            default:
-                break;
+    const structuredtext = text.structuredtext && text.structuredtext[0];
+    if (structuredtext) {
+        const wl = structuredtext.winlink;
+        if (winlink && wl) {
+            let show = "";
+            if (winlink[wl.id]) {
+                show = `onclick="showNamekey('winlink-express-show ${text.id}')"`;
+            }
+            textmsg = `<div class="b"><div class="ack ${text.ack ? 'true' : ''}"></div><div class="w" ${show}><div class="i">Winlink</div><span>${wl.id.replace("/", " | ")}</span></div></div>`;
+        }
+        const im = structuredtext.image;
+        if (useimage && im) {
+            textmsg = `<div class="b"><div class="ack ${text.ack ? 'true' : ''}"></div><div class="i"><a target="_blank" href="${im.url}"><img loading="lazy" src="${im.url}" onerror="this.src='/apps/raven/ix.png'"></a></div></div>`;
         }
     }
     if (!textmsg) {
-        const img = txt.match(/^(http:\/\/[^\.]+\.local\.mesh\/cgi-bin\/apps\/raven\/image\?i=.+)$/);
-        if (img && useimage) {
-            textmsg = `<div class="b"><div class="i"><a target="_blank" href="${img[1]}"><img loading="lazy" src="${img[1]}" onerror="this.src='/apps/raven/ix.png'"></a></div></div>`;
-        }
-        else {
-            textmsg = `<div class="b"><div class="ack ${text.ack ? 'true' : ''}"></div><div class="t">` + txt.replace(/https?:\/\/[^ \t<]+/g, v => `<a target="_blank" href="${v}">${v}</a>`) + '</div><a href="#" class="re" onclick="setupReply(event)">Reply</a></div>';
-        }
+        textmsg = `<div class="b"><div class="ack ${text.ack ? 'true' : ''}"></div><div class="t">` + T(text.text).replace(/https?:\/\/[^ \t<]+/g, v => `<a target="_blank" href="${v}">${v}</a>`) + '</div><a href="#" class="re" onclick="setupReply(event)">Reply</a></div>';
     }
     return `<div id="${text.id}" class="text ${n.num == me.num ? 'right ' : ''}${n.hw ? n.hw : ''}">
         ${reply}
@@ -863,7 +850,7 @@ function winlinkSubmit(formdata)
     if (chan?.state?.winlink) {
         const namekey = previousSelection;
         const form = rightSelection.substr(21);
-        setTimeout(_ => send({ cmd: "winpost", namekey: namekey, id: form, data: JSON.parse(formdata) }), 500);
+        setTimeout(_ => send({ cmd: "post", namekey: namekey, text: `[Winlink: ${form.replace("/", " | ")}]`, structuredtext: [ { winlink: { id: form, data: JSON.parse(formdata) } }] }), 500);
     }
     showNamekey(previousSelection);
 }
@@ -1029,7 +1016,7 @@ function startup()
                     if (useImage(dropSelection)) {
                         const hostname = location.hostname.indexOf(".local.mesh") == -1 ? `${location.hostname}.local.mesh` : location.hostname;
                         I("texts").lastElementChild.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
-                        setTimeout(_ => send({ cmd: "post", namekey: dropSelection, text: `http://${hostname}/cgi-bin/apps/raven/image?i=${msg.name}` }), 500);
+                        setTimeout(_ => send({ cmd: "post", namekey: dropSelection, text: `[Image]`, structuredtext: [ { image: { url: `http://${hostname}/cgi-bin/apps/raven/image?i=${msg.name}` } } ] }), 500);
                     }
                     break;
                 }

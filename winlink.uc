@@ -60,7 +60,7 @@ export function post(id, formdata)
             nformdata[key] = lformdata[key];
         }
     }
-    return sprintf("%J", { winlink: { id: id, data: nformdata } });
+    return { id: id, data: nformdata };
 };
 
 export function menu()

@@ -214,11 +214,20 @@ export function tick()
                 case "post":
                 {
                     let tmsg;
+                    let structuredtext = null;
+                    if (msg.structuredtext) {
+                        structuredtext = msg.structuredtext;
+                        for (let i = 0; i < length(msg.structuredtext); i++) {
+                            if (structuredtext[i].winlink) {
+                                structuredtext[i].winlink = winlink.post(structuredtext[i].winlink.id, structuredtext[i].winlink.data);
+                            }
+                        }
+                    }
                     if (channel.isDirect(msg.namekey)) {
-                        tmsg = textmessage.createDirectMessage(msg.namekey, msg.text, null, msg.replyto);
+                        tmsg = textmessage.createDirectMessage(msg.namekey, msg.text, structuredtext, msg.replyto);
                     }
                     else if (channel.getLocalChannelByNameKey(msg.namekey)) {
-                       tmsg = textmessage.createMessage(null, msg.namekey, msg.text, null, msg.replyto);
+                        tmsg = textmessage.createMessage(null, msg.namekey, msg.text, structuredtext, msg.replyto);
                     }
                     if (tmsg) {
                         router.queue(tmsg);
@@ -258,30 +267,15 @@ export function tick()
                 case "winshow":
                 {
                     try {
-                        const data = json(textmessage.getMessage(msg.namekey, msg.id)?.text)?.winlink;
-                        if (data) {
-                            const formdata = winlink.formshow(data.id, data.data);
+                        const sdata = textmessage.getMessage(msg.namekey, msg.id)?.structuredtext;
+                        if (sdata && sdata[0] && sdata[0].winlink) {
+                            const formdata = winlink.formshow(sdata[0].winlink.id, sdata[0].winlink.data);
                             if (formdata) {
                                 send({ event: msg.cmd, formdata: formdata }, msg.socket);
                             }
                         }
                     }
                     catch (_) {
-                    }
-                    break;
-                }
-                case "winpost":
-                {
-                    let tmsg;
-                    const text = winlink.post(msg.id, msg.data);
-                    if (channel.isDirect(msg.namekey)) {
-                        tmsg = textmessage.createDirectMessage(msg.namekey, text, null);
-                    }
-                    else if (channel.getLocalChannelByNameKey(msg.namekey)) {
-                       tmsg = textmessage.createMessage(null, msg.namekey, text, null);
-                    }
-                    if (tmsg) {
-                        router.queue(tmsg);
                     }
                     break;
                 }
