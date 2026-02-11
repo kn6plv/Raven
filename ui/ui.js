@@ -148,6 +148,10 @@ function htmlNodeDetail(node)
     if (node.mapurl) {
         map = `<a class="map" href="${node.mapurl}" target="_blank"><iframe src="${node.mapurl}"></iframe><div class="overlay"></div></a>`;
     }
+    let hops = "";
+    if (node.hops !== null) {
+        hops = `<div class="r"><div>Hops</div><div>${node.hops}</div></div>`;
+    }
     return `<div class="node-detail">
         <div class="node ${node.hw}">
             <div class="s" style="color:${node.colors.fcolor};background-color:${node.colors.bcolor}">${node.short_name}</div>
@@ -157,7 +161,7 @@ function htmlNodeDetail(node)
                 <div class="r"><div>User Id</div><div>${node.id}</div></div>
                 <div class="r"><div>Platform</div><div>${node.hw == "aredn" ? "AREDN" : "Meshtastic"}</div></div>
                 <div class="r"><div>Public Key</div><div>${node.public_key}</div></div>
-                <div class="r"><div>Hops</div><div>${node.hops}</div></div>
+                ${hops}
                 <div class="r"><div>Role</div><div>${node.rolename}</div></div>
                 <div class="t"><div>Last seen</div><div>${new Date(1000 * node.lastseen).toLocaleString()}</div></div>
             </div>
