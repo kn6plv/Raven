@@ -47,6 +47,7 @@ let maxBinarySize = 1 * 1024 * 1024;
     const c = uci.cursor();
     ucdata.latitude = c.get("aredn", "@location[0]", "lat");
     ucdata.longitude = c.get("aredn", "@location[0]", "lon");
+    ucdata.gridsquare = c.get("aredn", "@location[0]", "gridsquare");
     ucdata.height = c.get("aredn", "@location[0]", "height");
     ucdata.hostname = c.get("system", "@system[0]", "hostname");
     ucdata.mapUrl = c.get("aredn", "@location[0]", "map");
@@ -105,6 +106,9 @@ let maxBinarySize = 1 * 1024 * 1024;
     if (location.altitude === null) {
         location.altitude = ucdata.height;
     }
+    if (location.gridsquare === null) {
+        location.gridsquare = ucdata.gridsquare;
+    }
     if (location.precision === null) {
         location.precision = 32;
     }
@@ -128,6 +132,10 @@ let maxBinarySize = 1 * 1024 * 1024;
     }
     if (config.short_name === null) {
         config.short_name = substr(split(ucdata.hostname, "-", 2)[0], -4);
+    }
+    const callsign = split(config.long_name, "-")[0];
+    if (callsign) {
+        config.callsign = callsign;
     }
 
     if (config.macaddress === null) {

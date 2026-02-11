@@ -3,6 +3,7 @@ import * as node from "node";
 const WINLINK_FORMS_DIR = "winlink/forms";
 const menuitems = [];
 const forms = {};
+let seqnum = 1;
 
 export function formpost(id)
 {
@@ -15,13 +16,19 @@ export function formpost(id)
     const loc = node.getLocation(true);
    
     data = replace(data, /<head>/, `<head><base href="about:srcdoc">`);
-    data = replace(data, /\{(var )?MsgSender\}/ig, `${split(me.long_name, "-")[0]}`);
-    data = replace(data, /\{(var )?SeqNum\}/ig, "");
+    data = replace(data, /\{(var )?MsgSender\}/ig, `${me.callsign ?? ""}`);
+    data = replace(data, /\{(var )?SeqNum\}/ig, `${seqnum++}`);
     data = replace(data, /\{(var )?Latitude\}/ig, `${loc.lat}`);
     data = replace(data, /\{(var )?Longitude\}/ig, `${loc.lon}`);
-    data = replace(data, /\{(var )?GridSquare\}/ig, "");
-    data = replace(data, /\{(var )?GPS_SIGNED_DECIMAL\}/ig, "(Not available)");
-    data = replace(data, /\{(var )?Location_Source\}/ig, "SPECIFIED");
+    data = replace(data, /\{(var )?GridSquare\}/ig, `${me.gridsquare ?? ""}`);
+    if (loc.source === 2) {
+        data = replace(data, /\{(var )?Location_Source\}/ig, "GPS");
+        data = replace(data, /\{(var )?GPS_SIGNED_DECIMAL\}/ig, `${loc.lat} ${loc.lon}`);
+    }
+    else {
+        data = replace(data, /\{(var )?Location_Source\}/ig, "SPECIFIED");
+        data = replace(data, /\{(var )?GPS_SIGNED_DECIMAL\}/ig, "(Not available)");
+    }
     
     return data;
 };

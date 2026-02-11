@@ -127,6 +127,7 @@ export function setup(config)
         me.lat = location.latitude ?? me.lat;
         me.lon = location.longitude ?? me.lon;
         me.alt = location.altitude ?? me.alt;
+        me.gridsquare = location.gridsquare;
         preciseLocation = {
             lat: me.lat,
             lon: me.lon,
@@ -148,6 +149,9 @@ export function setup(config)
     }
     if (config.short_name) {
         me.short_name = substr(config.short_name, 0, MAX_SHORT_NAME_LENGTH);
+    }
+    if (config.callsign) {
+        me.callsign = config.callsign;
     }
     switch (config.role) {
         case "client":
