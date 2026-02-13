@@ -300,9 +300,9 @@ function htmlWinlinkMenu(menu)
     return main;
 }
 
-function domWinlink(formdata)
+function domWinlink(formdata, action)
 {
-    const win = N("<div class='winlink'><iframe></iframe><button onclick='winlinkCancel()'>Cancel</button></div>");
+    const win = N(`<div class='winlink'><iframe></iframe><button onclick='winlinkCancel()'>${action}</button></div>`);
     Q(win, "iframe").srcdoc = formdata;
     return win;
 }
@@ -821,12 +821,12 @@ function winlinkMenu(msg)
     }
 }
 
-function winlinkFormDisplay(msg)
+function winlinkFormDisplay(msg, action)
 {
     const texts = I("texts");
     texts.textContent = null;
     clearTimeout(updateTextTimeout);
-    texts.appendChild(domWinlink(msg.formdata));
+    texts.appendChild(domWinlink(msg.formdata, action));
     resetPost();
     const win = Q(texts, "iframe").contentWindow;
     function fixup()
@@ -1046,8 +1046,10 @@ function startup()
                     resetPost();
                     break;
                 case "winform":
+                    winlinkFormDisplay(msg, "Cancel");
+                    break;
                 case "winshow":
-                    winlinkFormDisplay(msg);
+                    winlinkFormDisplay(msg, "Close");
                     break;
                 case "beat":
                     break;
