@@ -398,13 +398,13 @@ a
 }
 .node.fade
 {
-    animation: fadeIn 0.5s;
+    animation: fadeIn 1s;
 }
 @keyframes fadeIn
 {
-  0% { opacity: 0; max-height: 0; }
-  50% { opacity: 0; max-height: 120px }
-  100% { opacity: 1; max-height: 300px; }
+    0% { opacity: 0; max-height: 0; }
+    50% { opacity: 0; max-height: 78px }
+    100% { opacity: 1; max-height: 300px; }
 }
 .node .s
 {
