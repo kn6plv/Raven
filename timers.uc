@@ -49,6 +49,11 @@ export function setTimeout(name, timeout)
     setTimer(name, timeout, -1);
 };
 
+export function cancel(name)
+{
+    setTimer(name, -1, -1);
+};
+
 export function tick(name)
 {
     const now = clock()[0];
