@@ -361,6 +361,7 @@ function refreshTargets()
     byid = {};
     bynamekey = {};
     forwarders = [];
+    const ostores = sprintf("%J", stores);
     stores = {};
     for (let i = 0; i < length(published); i++) {
         const service = published[i];
@@ -390,6 +391,9 @@ function refreshTargets()
                 }
             }
         }
+    }
+    if (sprintf("%J", stores) !== ostores) {
+        timers.trigger("textstoreresync");
     }
 }
 
