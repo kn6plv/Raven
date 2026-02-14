@@ -197,7 +197,7 @@ function read(ns)
                     ns.send(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${digest}\r\n\r\n`);
                     state.state = S_MSGRECV;
                     state.incoming = substr(state.incoming, i + 4);
-                    return [ { text: '{"cmd":"connected"}' }, ...decode(state) ];
+                    return [ { text: '{"cmd":"connected"}', socket: ns }, ...decode(state) ];
                 }
             }
             break;
