@@ -10,8 +10,10 @@ let enabled = false;
 const SAVE_INTERVAL = 5 * 60;
 const SYNC_FIRST_INTERVAL = 5;
 const SYNC_INTERVAL = 10;
+const RESYNC_INTERVAL = 60 * 60;
 const DEFAULT_STORE_SIZE = 50;
 const stores = {};
+const synced = {};
 const dirty = {};
 let defaultStoreSize = DEFAULT_STORE_SIZE;
 let syncCount = 3;
@@ -41,9 +43,8 @@ function saveToPlatform()
 function addMessage(msg)
 {
     const store = loadStore(msg.namekey);
-    const idx = `${msg.from}:${msg.id}`;
-    if (!store.index[idx]) {
-        store.index[idx] = true;
+    if (!store.index[msg.id]) {
+        store.index[msg.id] = true;
         msg.stored = true;
         push(store.messages, json(sprintf("%J", msg)));
         sort(store.messages, (a, b) => a.rx_time - b.rx_time);
@@ -70,7 +71,7 @@ function resendMessages(msg)
     if (cursor && store.index[cursor]) {
         for (let i = mlength - 1; i >= 0; i--) {
             const msg = messages[i];
-            if (cursor === `${msg.from}:${msg.id}`) {
+            if (cursor == msg.id) {
                 start = i + 1;
                 break;
             }
@@ -85,16 +86,14 @@ function resendMessages(msg)
     if (limit > 0) {
         for (let i = 0; i < limit; i++) {
             const tm = messages[start + i];
-            router.queue(message.createMessage(msg.from, null, resend.namekey, "textstore_message", tm,
-            {
+            router.queue(message.createMessage(msg.from, null, resend.namekey, "textstore_message", tm, {
                 hop_start: 0,
                 hop_limit: 0,
             }));
         }
     }
     else {
-        router.queue(message.createMessage(msg.from, null, resend.namekey, "textstore_message", null,
-        {
+        router.queue(message.createMessage(msg.from, null, resend.namekey, "textstore_message", null, {
             hop_start: 0,
             hop_limit: 0,
         }));
@@ -104,7 +103,7 @@ function resendMessages(msg)
 export function syncMessageNamekey(namekey)
 {
     const stores = platform.getStoresByNamekey(namekey);
-    if (stores[0]) {
+    if (stores[0] && !synced[namekey]) {
         const to = stores[0].id;
         const state = textmessage.state(namekey);
         router.queue(message.createMessage(to, null, namekey, "textstore_resend", {
@@ -112,6 +111,10 @@ export function syncMessageNamekey(namekey)
             cursor: state.cursor,
             limit: state.max
         }));
+        synced[namekey] = true;
+    }
+    else {
+        synced[namekey] = false;
     }
 };
 
@@ -120,6 +123,17 @@ function syncMessages()
     const all = channel.getAllChannels();
     for (let i = 0; i < length(all); i++) {
         syncMessageNamekey(all[i].namekey);
+    }
+}
+
+function checkMissing(msg)
+{
+    if (msg.data.last_id && !textmessage.getMessage(msg.namekey, msg.data.last_id)) {
+        router.queue(message.createMessage(to, null, msg.namekey, "textstore_resend", {
+            namekey: msg.namekey,
+            cursor: msg.data.last_id,
+            limit: 1
+        }));
     }
 }
 
@@ -141,22 +155,26 @@ export function setup(config)
                 }
             }
         }
-        timers.setInterval("textstore", SAVE_INTERVAL);
+        timers.setInterval("textstoresave", SAVE_INTERVAL);
     }
-    timers.setInterval("messagesync", SYNC_FIRST_INTERVAL, SYNC_INTERVAL);
+    timers.setInterval("textstoresync", SYNC_FIRST_INTERVAL, SYNC_INTERVAL);
+    timers.setInterval("textstoreresync", RESYNC_INTERVAL);
 };
 
 export function tick()
 {
-    if (timers.tick("textstore")) {
+    if (timers.tick("textstoresave")) {
         saveToPlatform();
     }
-    if (timers.tick("messagesync")) {
+    if (timers.tick("textstoresync")) {
         syncMessages();
         syncCount--;
         if (syncCount <= 0) {
-            timers.setInterval("messagesync", -1);
+            timers.cancel("textstoresync");
         }
+    }
+    if (timers.tick("textstoreresync")) {
+        syncMessages();
     }
 };
 
@@ -173,7 +191,7 @@ export function process(msg)
             }
         }
         else if (msg.data.textstore_message) {
-            timers.setInterval("messagesync", -1);
+            timers.cancel("textstoresync");
             if (msg.data.textstore_message) {
                 textmessage.addMessage(msg.data.textstore_message);
                 if (enabled) {
@@ -181,6 +199,9 @@ export function process(msg)
                 }
             }
         }
+    }
+    if (msg.data?.text_message && node.forMe(msg) && channel.getLocalChannelByNameKey(msg.namekey)) {
+        checkMissing(msg);
     }
     if (enabled) {
         if (msg.data?.text_message) {
