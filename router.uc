@@ -61,9 +61,8 @@ export function queue(msg)
 {
     if (msg) {
         // Remember messages we queued for a little while and don't queue them again.
-        const key = `${msg.from}:${msg.id}`;
-        if (index(recent, key) === -1) {
-            push(recent, key);
+        if (index(recent, msg.id) === -1) {
+            push(recent, msg.id);
             if (length(recent) > MAX_RECENT) {
                 shift(recent);
             }

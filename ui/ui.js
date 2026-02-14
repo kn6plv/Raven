@@ -184,8 +184,7 @@ function htmlText(text, useimage)
     }
     let reply = "";
     if (text.replyid) {
-        const key = `:${text.replyid}`;
-        const r = texts.findLast(t => t.id.indexOf(key) !== -1);
+        const r = texts.findLast(t => t.id == text.replyid);
         if (r) {
             reply = `<div class="r"><div>${T(r.text.replace(/\n/g," "))}</div></div>`;
         }
@@ -406,7 +405,7 @@ function restartTextsObserver(channel)
                 channel.state.count--;
                 if (!newest || entry.time >= newest.time) {
                     newest = entry;
-                    channel.state.cursor = entry.target.id;
+                    channel.state.cursor = parseInt(entry.target.id);
                 }
             }
         });
@@ -414,7 +413,7 @@ function restartTextsObserver(channel)
             getChannelUnread(channel).innerText = (channel.state.count > 0 ? channel.state.count : "");
             updateTitle();
             send({ cmd: "catchup", namekey: channel.namekey, id: channel.state.cursor });
-            if (textObs.root.lastElementChild.id === channel.state.cursor) {
+            if (textObs.root.lastElementChild.id == channel.state.cursor) {
                 restartTextsObserver(channel);
             }
         }
@@ -434,7 +433,7 @@ function updateTexts(msg)
     if (channel.state.cursor) {
         I(channel.state.cursor).scrollIntoView({ behavior: "instant", block: "end", inline: "nearest" });
         for (let txt = t.firstElementChild; txt; txt = txt.nextSibling) {
-            if (txt.id === channel.state.cursor) {
+            if (txt.id == channel.state.cursor) {
                 for (txt = txt.nextSibling; txt; txt = txt.nextSibling) {
                     textObs.observe(txt);
                 }
@@ -453,7 +452,7 @@ function updateTexts(msg)
         for (let txt = t.firstElementChild; txt; txt = txt.nextSibling) {
             if (onScreen(txt)) {
                 channel.state.count--;
-                channel.state.cursor = txt.id
+                channel.state.cursor = parseInt(txt.id)
             }
             else {
                 textObs.observe(txt);
@@ -469,7 +468,7 @@ function updateTexts(msg)
 
 function updateText(msg)
 {
-    if (texts.find(t => t.id === msg.id)) {
+    if (texts.find(t => t.id == msg.id)) {
         return;
     }
     const t = I("texts");
@@ -536,7 +535,8 @@ function sendMessage(event)
             I("texts").lastElementChild.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
             const namekey = rightSelection;
             const rid = replyid;
-            setTimeout(_ => send({ cmd: "post", namekey: namekey, text: text.trim(), replyto: rid }), 500);
+            const lid = texts ? texts[texts.length - 1].id : null;
+            setTimeout(_ => send({ cmd: "post", namekey: namekey, text: text.trim(), replyto: rid, last: lid }), 500);
             if (isDirect(rightSelection)) {
                 const fav = Q(`.node-detail .star:not(.true)`);
                 if (fav) {
@@ -887,7 +887,7 @@ function showNamekey(namekey)
 {
     if (namekey == rightSelection) {
         if (getChannel(namekey)) {
-            I("texts").lastElementChild.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
+            I("texts").lastElementChild?.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
         }
     }
     else {
@@ -1057,7 +1057,8 @@ function startup()
                     break;
             }
         }
-        catch (_) {
+        catch (e) {
+            console.log(e);
         }
     });
 }

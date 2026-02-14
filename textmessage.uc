@@ -62,11 +62,10 @@ export function saveMessages(namekey, chanmessages)
 export function addMessage(msg)
 {
     const chanmessages = loadMessages(msg.namekey);
-    const idx = `${msg.from}:${msg.id}`;
-    if (!chanmessages.index[idx]) {
-        chanmessages.index[idx] = true;
+    if (!chanmessages.index[msg.id]) {
+        chanmessages.index[msg.id] = true;
         push(chanmessages.messages, {
-            id: idx,
+            id: msg.id,
             from: msg.from,
             when: msg.rx_time,
             text: msg.data.text_message,
@@ -74,7 +73,7 @@ export function addMessage(msg)
             replyid: msg.data.reply_id
         });
         saveMessages(msg.namekey, chanmessages);
-        event.notify({ cmd: "text", namekey: msg.namekey, id: idx }, `text ${msg.namekey} ${idx}`);
+        event.notify({ cmd: "text", namekey: msg.namekey, id: msg.id }, `text ${msg.namekey} ${msg.id}`);
     }
 };
 
@@ -98,13 +97,16 @@ export function getMessage(namekey, id)
     return null;
 };
 
-export function createMessage(to, namekey, text, structuredtext, replyto)
+export function createMessage(to, namekey, text, structuredtext, replyto, last)
 {
     const extra = {
         data: {}
     };
     if (replyto) {
-        extra.data.reply_id = int(split(replyto, ":")[1]);
+        extra.data.reply_id = replyto;
+    }
+    if (last) {
+        extra.data.last_id = last;
     }
     if (structuredtext) {
         extra.data.structured_text_message = structuredtext;
@@ -117,7 +119,7 @@ export function createMessage(to, namekey, text, structuredtext, replyto)
 export function catchUpMessagesTo(namekey, id)
 {
     const cm = loadMessages(namekey);
-    if (cm.index[id] && id !== cm.cursor) {
+    if (cm.index[id] && id != cm.cursor) {
         cm.cursor = id;
         saveMessages(namekey, cm);
     }
@@ -161,7 +163,7 @@ function addDirectMessage(msg)
     addMessage(msg);
 }
 
-export function createDirectMessage(to, text, structuredtext, replyto)
+export function createDirectMessage(to, text, structuredtext, replyto, last)
 {
     const extra = {
         namekey: to,
@@ -169,7 +171,10 @@ export function createDirectMessage(to, text, structuredtext, replyto)
         data: {}
     };
     if (replyto) {
-        extra.data.reply_id = int(split(replyto, ":")[1]);
+        extra.data.reply_id = replyto;
+    }
+    if (last) {
+        extra.data.last_id = last;
     }
     if (structuredtext) {
         extra.data.structured_text_message = structuredtext;
@@ -255,12 +260,11 @@ export function process(msg)
     else if (node.toMe(msg) && msg.data?.routing) {
         if (msg.data.routing.error_reason === 0) {
             const namekey = nodedb.namekey(msg.from);
-            const idx = `${msg.to}:${msg.data.request_id}`;
-            const message = getMessage(namekey, idx);
+            const message = getMessage(namekey, msg.data.request_id);
             if (message) {
                 message.ack = true;
                 saveMessages(namekey);
-                event.notify({ cmd: "ack", namekey: namekey, id: idx }, `text ${namekey} ${idx}`);
+                event.notify({ cmd: "ack", namekey: namekey, id: msg.data.request_id }, `text ${namekey} ${msg.data.request_id}`);
             }
         }
     }

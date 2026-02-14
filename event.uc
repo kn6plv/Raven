@@ -229,10 +229,10 @@ export function tick()
                         }
                     }
                     if (channel.isDirect(msg.namekey)) {
-                        tmsg = textmessage.createDirectMessage(msg.namekey, msg.text, structuredtext, msg.replyto);
+                        tmsg = textmessage.createDirectMessage(msg.namekey, msg.text, structuredtext, msg.replyto, msg.last);
                     }
                     else if (channel.getLocalChannelByNameKey(msg.namekey)) {
-                        tmsg = textmessage.createMessage(null, msg.namekey, msg.text, structuredtext, msg.replyto);
+                        tmsg = textmessage.createMessage(null, msg.namekey, msg.text, structuredtext, msg.replyto, msg.last);
                     }
                     if (tmsg) {
                         router.queue(tmsg);
