@@ -15,6 +15,7 @@ const DEFAULT_STORE_SIZE = 50;
 const stores = {};
 const synced = {};
 const dirty = {};
+const indexes = {};
 let defaultStoreSize = DEFAULT_STORE_SIZE;
 let syncCount = 3;
 
@@ -22,10 +23,16 @@ function loadStore(namekey)
 {
     if (!stores[namekey]) {
         stores[namekey] = platform.load(`textstore.${namekey}`) ?? {
-            index: {},
             messages: [],
             size: defaultStoreSize
         };
+        const messages = stores[namekey].messages;
+        const index = {};
+        indexes[namekey] = index;
+        for (let i = 0; i < length(messages); i++) {
+            index[messages[i].id] = true;
+        }
+
     }
     return stores[namekey];
 }
@@ -43,14 +50,14 @@ function saveToPlatform()
 function addMessage(msg)
 {
     const store = loadStore(msg.namekey);
-    if (!store.index[msg.id]) {
-        store.index[msg.id] = true;
+    if (!indexes[msg.namekey][msg.id]) {
+        indexs[msg.namekey][msg.id] = true;
         msg.stored = true;
         push(store.messages, json(sprintf("%J", msg)));
         sort(store.messages, (a, b) => a.rx_time - b.rx_time);
         while (length(store.messages) > store.size) {
             const m = shift(store.messages);
-            delete store.index[m.id];
+            delete indexes[msg.namekey][m.id];
         }
         dirty[msg.namekey] = true;
     }
@@ -68,7 +75,7 @@ function resendMessages(msg)
     let limit = min(resend.limit, store.size);
     const cursor = resend.cursor;
 
-    if (cursor && store.index[cursor]) {
+    if (cursor && indexes[resend.namekey][cursor]) {
         for (let i = mlength - 1; i >= 0; i--) {
             const msg = messages[i];
             if (cursor == msg.id) {

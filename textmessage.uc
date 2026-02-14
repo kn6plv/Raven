@@ -12,13 +12,13 @@ const SAVE_INTERVAL = 5 * 60;
 
 const channelmessages = {};
 const channelmessagesdirty = {};
+const channelindex = {};
 
 function loadMessages(namekey)
 {
     if (!channelmessages[namekey]) {
         channelmessages[namekey] = platform.load(`messages.${namekey}`) ?? {
             max: MAX_MESSAGES,
-            index: {},
             count: 0,
             cursor: null,
             messages: [],
@@ -26,6 +26,13 @@ function loadMessages(namekey)
             images: true,
             winlink: channel.isDirect(namekey)
         };
+        const chanmessages = channelmessages[namekey].messages;
+        const index = {};
+        channelindex[namekey] = index;
+        for (let i = 0; i < length(chanmessages); i++) {
+            const m = chanmessages[i];
+            index[m.id] = true;
+        }
         platform.badge(`messages.${namekey}`, channelmessages[namekey].badge ? channelmessages[namekey].count : 0);
     }
     return channelmessages[namekey];
@@ -39,7 +46,7 @@ export function saveMessages(namekey, chanmessages)
     const messages = chanmessages.messages;
     const cursor = chanmessages.cursor;
     const max = chanmessages.max;
-    const index = chanmessages.index;
+    const index = indexes[namekey];
     while (length(messages) > max) {
         const m = shift(messages);
         delete index[m.id];
@@ -62,8 +69,8 @@ export function saveMessages(namekey, chanmessages)
 export function addMessage(msg)
 {
     const chanmessages = loadMessages(msg.namekey);
-    if (!chanmessages.index[msg.id]) {
-        chanmessages.index[msg.id] = true;
+    if (!indexes[msg.namekey][msg.id]) {
+        indexes[msg.namekey][msg.id] = true;
         push(chanmessages.messages, {
             id: msg.id,
             from: msg.from,
@@ -85,7 +92,7 @@ export function getMessages(namekey)
 export function getMessage(namekey, id)
 {
     const chanmessages = loadMessages(namekey);
-    if (chanmessages && chanmessages.index[id]) {
+    if (chanmessages && indexes[namekey][id]) {
         const messages = chanmessages.messages;
         for (let i = length(messages) - 1; i >= 0; i--) {
             const message = messages[i];
@@ -119,7 +126,7 @@ export function createMessage(to, namekey, text, structuredtext, replyto, last)
 export function catchUpMessagesTo(namekey, id)
 {
     const cm = loadMessages(namekey);
-    if (cm.index[id] && id != cm.cursor) {
+    if (indexes[namekey][id] && id != cm.cursor) {
         cm.cursor = id;
         saveMessages(namekey, cm);
     }
