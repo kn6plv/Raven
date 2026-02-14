@@ -46,7 +46,7 @@ export function saveMessages(namekey, chanmessages)
     const messages = chanmessages.messages;
     const cursor = chanmessages.cursor;
     const max = chanmessages.max;
-    const index = indexes[namekey];
+    const index = channelindex[namekey];
     while (length(messages) > max) {
         const m = shift(messages);
         delete index[m.id];
@@ -69,8 +69,8 @@ export function saveMessages(namekey, chanmessages)
 export function addMessage(msg)
 {
     const chanmessages = loadMessages(msg.namekey);
-    if (!indexes[msg.namekey][msg.id]) {
-        indexes[msg.namekey][msg.id] = true;
+    if (!channelindex[msg.namekey][msg.id]) {
+        channelindex[msg.namekey][msg.id] = true;
         push(chanmessages.messages, {
             id: msg.id,
             from: msg.from,
@@ -92,7 +92,7 @@ export function getMessages(namekey)
 export function getMessage(namekey, id)
 {
     const chanmessages = loadMessages(namekey);
-    if (chanmessages && indexes[namekey][id]) {
+    if (chanmessages && channelindex[namekey][id]) {
         const messages = chanmessages.messages;
         for (let i = length(messages) - 1; i >= 0; i--) {
             const message = messages[i];
@@ -126,7 +126,7 @@ export function createMessage(to, namekey, text, structuredtext, replyto, last)
 export function catchUpMessagesTo(namekey, id)
 {
     const cm = loadMessages(namekey);
-    if (indexes[namekey][id] && id != cm.cursor) {
+    if (channelindex[namekey][id] && id != cm.cursor) {
         cm.cursor = id;
         saveMessages(namekey, cm);
     }
