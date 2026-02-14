@@ -15,6 +15,7 @@ let replyid;
 let activeFilter;
 let winlink = null;
 let activityTimeout;
+let catchupTimeout;
 const xdiv = document.createElement("div");
 
 const roles = {
@@ -392,6 +393,12 @@ function getChannelUnread(channel)
     return Q(`[data-namekey="${channel.namekey}"] .unread`);
 }
 
+function catchup(channel)
+{
+    clearTimeout(catchupTimeout);
+    catchupTimeout = setTimeout(_ => send({ cmd: "catchup", namekey: channel.namekey, id: channel.state.cursor }), 100);
+}
+
 function restartTextsObserver(channel)
 {
     if (textObs) {
@@ -412,7 +419,7 @@ function restartTextsObserver(channel)
         if (newest) {
             getChannelUnread(channel).innerText = (channel.state.count > 0 ? channel.state.count : "");
             updateTitle();
-            send({ cmd: "catchup", namekey: channel.namekey, id: channel.state.cursor });
+            catchup(channel);
             if (textObs.root.lastElementChild.id == channel.state.cursor) {
                 restartTextsObserver(channel);
             }
@@ -459,7 +466,7 @@ function updateTexts(msg)
             }
         }
         if (channel.state.cursor) {
-            send({ cmd: "catchup", namekey: channel.namekey, id: channel.state.cursor });
+            catchup(channel);
         }
     }
     getChannelUnread(channel).innerText = (channel.state.count > 0 ? channel.state.count : "");
@@ -475,13 +482,14 @@ function updateText(msg)
     const atbottom = (t.scrollTop > t.scrollHeight - t.clientHeight - 50);
     texts.push(msg.text);
     const n = t.appendChild(N(htmlText(msg.text, useImage(msg.namekey))));
+    const channel = getChannel(msg.namekey);
     if (atbottom && document.visibilityState == "visible") {
         t.lastElementChild.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
-        send({ cmd: "catchup", namekey: msg.namekey, id: msg.text.id });
+        channel.state.cursor = msg.text.id;
+        catchup(channel);
     }
     else {
         textObs.observe(n);
-        const channel = getChannel(msg.namekey);
         channel.state.count++;
         getChannelUnread(channel).innerText = channel.state.count;
         updateTitle();
