@@ -103,15 +103,17 @@ function resendMessages(msg)
 export function syncMessageNamekey(namekey)
 {
     const stores = platform.getStoresByNamekey(namekey);
-    if (stores[0] && !synced[namekey]) {
-        const to = stores[0].id;
-        const state = textmessage.state(namekey);
-        router.queue(message.createMessage(to, null, namekey, "textstore_resend", {
-            namekey: namekey,
-            cursor: state.cursor,
-            limit: state.max
-        }));
-        synced[namekey] = true;
+    if (stores[0]) {
+        if (!synced[namekey]) {
+            const to = stores[0].id;
+            const state = textmessage.state(namekey);
+            router.queue(message.createMessage(to, null, namekey, "textstore_resend", {
+                namekey: namekey,
+                cursor: state.cursor,
+                limit: state.max
+            }));
+            synced[namekey] = true;
+        }
     }
     else {
         synced[namekey] = false;
