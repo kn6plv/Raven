@@ -106,7 +106,7 @@ function nodeColors(n)
 function nodeExpand(node)
 {
     node.colors = nodeColors(node.num);
-    node.rolename = roles[node.role] ?? "?";
+    node.rolename = node.hw === "aredn" ? "AREDN" : roles[node.role] ? roles[node.role] : "?";
     return node;
 }
 
