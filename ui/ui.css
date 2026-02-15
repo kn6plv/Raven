@@ -161,6 +161,10 @@ a
 {
     flex: 1;
     font-size: 8px;
+    color: transparent;
+}
+#footer .copy:hover
+{
     color: var(--disabled-text-color);
 }
 #footer .copy > div
