@@ -155,7 +155,18 @@ a
 }
 #footer
 {
-    height: 0;
+    margin: -5px 0;
+}
+#footer .copy
+{
+    flex: 1;
+    font-size: 8px;
+    color: var(--disabled-text-color);
+}
+#footer .copy > div
+{
+    flex: 1;
+    justify-content: center;
 }
 #left
 {
