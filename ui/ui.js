@@ -936,8 +936,9 @@ function showNamekey(namekey)
             }
             else if (namekey.indexOf("winlink-express-show ") === 0) {
                 const id = parseInt(namekey.substr(21));
+                const pnamekey = previousSelection;
                 I(id).scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
-                send({ cmd: "winshow", namekey: previousSelection, id: id });
+                setTimeout(_ => send({ cmd: "winshow", namekey: pnamekey, id: id }), 500);
             }
             else {
                 if (isDirect(namekey)) {
