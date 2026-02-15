@@ -935,7 +935,9 @@ function showNamekey(namekey)
                 send({ cmd: "winform", namekey: previousSelection, id: namekey.substr(21) });
             }
             else if (namekey.indexOf("winlink-express-show ") === 0) {
-                send({ cmd: "winshow", namekey: previousSelection, id: parseInt(namekey.substr(21)) });
+                const id = parseInt(namekey.substr(21));
+                I(id).scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
+                send({ cmd: "winshow", namekey: previousSelection, id: id });
             }
             else {
                 if (isDirect(namekey)) {
