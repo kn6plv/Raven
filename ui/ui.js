@@ -16,6 +16,7 @@ let activeFilter;
 let winlink = null;
 let activityTimeout;
 let catchupTimeout;
+let focusid = null;
 const xdiv = document.createElement("div");
 
 const roles = {
@@ -300,9 +301,9 @@ function htmlWinlinkMenu(menu)
     return main;
 }
 
-function domWinlink(formdata, action)
+function domWinlink(formdata, id, action)
 {
-    const win = N(`<div class='winlink'><iframe></iframe><button onclick='winlinkCancel()'>${action}</button></div>`);
+    const win = N(`<div class='winlink'><iframe></iframe><button onclick='winlinkCancel(${id})'>${action}</button></div>`);
     Q(win, "iframe").srcdoc = formdata;
     return win;
 }
@@ -438,7 +439,9 @@ function updateTexts(msg)
     t.innerHTML = msg.texts.map(t => htmlText(t, useImage(msg.namekey))).join("");
     restartTextsObserver(channel);
     if (channel.state.cursor) {
-        I(channel.state.cursor).scrollIntoView({ behavior: "instant", block: "end", inline: "nearest" });
+        const item = (focusid && I(focusid)) || I(channel.state.cursor);
+        focusid = null;
+        item.scrollIntoView({ behavior: "instant", block: "end", inline: "nearest" });
         for (let txt = t.firstElementChild; txt; txt = txt.nextSibling) {
             if (txt.id == channel.state.cursor) {
                 for (txt = txt.nextSibling; txt; txt = txt.nextSibling) {
@@ -834,7 +837,7 @@ function winlinkFormDisplay(msg, action)
     const texts = I("texts");
     texts.textContent = null;
     clearTimeout(updateTextTimeout);
-    texts.appendChild(domWinlink(msg.formdata, action));
+    texts.appendChild(domWinlink(msg.formdata, msg.id, action));
     resetPost();
     const win = Q(texts, "iframe").contentWindow;
     function fixup()
@@ -852,8 +855,9 @@ function winlinkFormDisplay(msg, action)
     fixup();
 }
 
-function winlinkCancel()
+function winlinkCancel(id)
 {
+    focusid = id;
     showNamekey(previousSelection);
 }
 

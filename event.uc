@@ -276,7 +276,7 @@ export function tick()
                         if (sdata && sdata[0] && sdata[0].winlink) {
                             const formdata = winlink.formshow(sdata[0].winlink.id, sdata[0].winlink.data);
                             if (formdata) {
-                                send({ event: msg.cmd, formdata: formdata }, msg.socket);
+                                send({ event: msg.cmd, id: msg.id, formdata: formdata }, msg.socket);
                             }
                         }
                     }
