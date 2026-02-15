@@ -120,11 +120,15 @@ let maxBinarySize = 1 * 1024 * 1024;
         config.meshtastic.address = ucdata.lan_ip;
     }
 
-    if (config.channels?.AREDN === null) {
-        if (!config.channels) {
-            config.channels = {};
-        }
-        config.channels.AREDN = "og==";
+    if (config.role === "client_mute" && config.meshtastic && config.ipmesh) {
+        config.role = "client";
+    }
+
+    if (!config.channels) {
+        config.channels = [];
+    }
+    if (length(filter(config.channels, c => c.namekey === "AREDN og==")) === 0) {
+        push(config.channels, { "namekey": "AREDN og==" });
     }
 
     if (config.long_name === null) {

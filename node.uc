@@ -155,18 +155,13 @@ export function setup(config)
     }
     switch (config.role) {
         case "client":
-            if (config.ipmesh && config.meshtastic) {
-                me.role = ROLE_CLIENT;
-            }
-            else {
-                me.role = ROLE_CLIENT_MUTE;
-            }
+            me.role = ROLE_CLIENT;
             break;
         case "client_mute":
             me.role = ROLE_CLIENT_MUTE;
             break;
         default:
-            print(`Unknown role: ${config?.role}\n`);
+            print(`Unknown role: ${config.role}\n`);
             break;
     }
     maxHops = config.maxhops || DEFAULT_HOPS;
