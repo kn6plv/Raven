@@ -38,11 +38,9 @@ function loadMessages(namekey)
     return channelmessages[namekey];
 }
 
-export function saveMessages(namekey, chanmessages)
+export function saveMessages(namekey)
 {
-    if (!chanmessages) {
-        chanmessages = channelmessages[namekey];
-    }
+    const chanmessages = channelmessages[namekey];
     const messages = chanmessages.messages;
     const cursor = chanmessages.cursor;
     const max = chanmessages.max;
@@ -79,7 +77,7 @@ export function addMessage(msg)
             structuredtext: msg.data.structured_text_message,
             replyid: msg.data.reply_id
         });
-        saveMessages(msg.namekey, chanmessages);
+        saveMessages(msg.namekey);
         event.notify({ cmd: "text", namekey: msg.namekey, id: msg.id }, `text ${msg.namekey} ${msg.id}`);
     }
 };
@@ -128,7 +126,7 @@ export function catchUpMessagesTo(namekey, id)
     const cm = loadMessages(namekey);
     if (channelindex[namekey][id] && id != cm.cursor) {
         cm.cursor = id;
-        saveMessages(namekey, cm);
+        saveMessages(namekey);
     }
     return { count: cm.count, cursor: cm.cursor, max: cm.max, badge: cm.badge, images: cm.images, winlink: cm.winlink };
 };
@@ -142,7 +140,7 @@ export function updateSettings(channels)
         cm.max = channel.max;
         cm.images = channel.images;
         cm.winlink = channel.winlink;
-        saveMessages(channel.namekey, cm);
+        saveMessages(channel.namekey);
     }
 };
 
@@ -151,7 +149,7 @@ export function updateChannelBadge(namekey, badge)
     const chan = loadMessages(namekey);
     if (chan.badge != badge) {
         chan.badge = badge;
-        saveMessages(namekey, chan);
+        saveMessages(namekey);
     }
     if (channel.isDirect(namekey)) {
         const id = int(split(namekey, " ")[1]);
@@ -271,7 +269,7 @@ export function process(msg)
             if (message) {
                 message.ack = true;
                 saveMessages(namekey);
-                event.notify({ cmd: "ack", namekey: namekey, id: msg.data.request_id }, `text ${namekey} ${msg.data.request_id}`);
+                event.notify({ cmd: "ack", namekey: namekey, id: msg.data.request_id }, `ack ${namekey} ${msg.data.request_id}`);
             }
         }
     }
