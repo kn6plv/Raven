@@ -188,7 +188,7 @@ export function tick()
                         const n = split(c.namekey, " ");
                         c.namekey = `${substr(join("", slice(n, 0, -1)), 0, 13)} ${n[-1]}`;
                     }
-                    const nchannels = channel.updateChannels(msg.channels);
+                    const nchannels = channel.updateLocalChannels(msg.channels);
                     textmessage.updateSettings(msg.channels);
                     notify({ cmd: "channels" });
                     platform.publish(node.getInfo(), channel.getAllLocalChannels());

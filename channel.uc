@@ -58,7 +58,7 @@ export function addMessageNameKey(namekey)
     return chan;
 };
 
-function setChannel(config)
+function setLocalChannel(config)
 {
     const name = split(config.namekey, " ")[0];
     const chan = addMessageNameKey(config.namekey);
@@ -114,12 +114,12 @@ export function getTelemetryChannels()
     return telemetry;
 };
 
-export function updateChannels(channels)
+export function updateLocalChannels(channels)
 {
     const oldLocalChannelByNameKey = localChannelByNameKey;
     localChannelByNameKey = {};
     for (let i = 0; i < length(channels); i++) {
-        setChannel(channels[i]);
+        setLocalChannel(channels[i]);
     }
     const newchannels = [];
     for (let namekey in localChannelByNameKey) {
@@ -140,7 +140,7 @@ export function setup(config)
     const channels = config.channels;
     if (channels) {
         for (let i = 0; i < length(channels); i++) {
-            setChannel(channels[i]);
+            setLocalChannel(channels[i]);
         }
     }
 };
