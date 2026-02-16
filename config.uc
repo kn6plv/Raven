@@ -41,7 +41,7 @@ function update(option)
     switch (option) {
         case "channels":
         {
-            const channels = channel.getAllChannels();
+            const channels = channel.getAllLocalChannels();
             const nchannels = [];
             for (let i = 0; i < length(channels); i++) {
                 const nchannel = { namekey: channels[i].namekey };
@@ -192,7 +192,7 @@ export function setup()
     winlink.setup(config);
     router.registerApp(winlink);
 
-    platform.publish(node.getInfo(), channel.getAllChannels());
+    platform.publish(node.getInfo(), channel.getAllLocalChannels());
 
     function shutdown()
     {

@@ -129,7 +129,7 @@ export function syncMessageNamekey(namekey)
 
 function syncMessages()
 {
-    const all = channel.getAllChannels();
+    const all = channel.getAllLocalChannels();
     for (let i = 0; i < length(all); i++) {
         syncMessageNamekey(all[i].namekey);
     }

@@ -117,7 +117,7 @@ export function tick()
                     notify({ cmd: "channels" });
                     notify({ cmd: "favorites" });
                     notify({ cmd: "nodes" });
-                    const namekey = channel.getAllChannels()[0].namekey;
+                    const namekey = channel.getAllLocalChannels()[0].namekey;
                     notify({ cmd: "texts", namekey: namekey }, `texts ${namekey}`);
                     notify({ cmd: "winmenu" });
                     break;
@@ -175,7 +175,7 @@ export function tick()
                 }
                 case "channels":
                 {
-                    const channels = map(channel.getAllChannels(), c => {
+                    const channels = map(channel.getAllLocalChannels(), c => {
                         return { namekey: c.namekey, meshtastic: c.meshtastic, winlink: c.winlink, telemetry: c.telemetry, state: textmessage.state(c.namekey) };
                     });
                     send({ event: msg.cmd, channels: channels });
@@ -191,7 +191,7 @@ export function tick()
                     const nchannels = channel.updateChannels(msg.channels);
                     textmessage.updateSettings(msg.channels);
                     notify({ cmd: "channels" });
-                    platform.publish(node.getInfo(), channel.getAllChannels());
+                    platform.publish(node.getInfo(), channel.getAllLocalChannels());
                     for (let i = 0; i < length(nchannels); i++) {
                         textstore.syncMessageNamekey(nchannels[i].namekey);
                     }

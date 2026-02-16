@@ -14,7 +14,7 @@ const meshtasticChannelPresets = [
 global.channelByNameKey = {};
 global.channelsByHash = {};
 let meshtasticChannel;
-let channelByName = {};
+let localChannelByNameKey = {};
 
 function getCryptoKey(key)
 {
@@ -70,7 +70,7 @@ function setChannel(config)
     if (config.telemetry !== null) {
         chan.telemetry = config.telemetry;
     }
-    channelByName[name] = chan;
+    localChannelByNameKey[config.namekey] = chan;
 };
 
 export function getChannelsByHash(hash)
@@ -81,17 +81,12 @@ export function getChannelsByHash(hash)
     return channelsByHash[hash];
 };
 
-export function getLocalChannelByName(name)
-{
-    if (!name) {
-        return meshtasticChannel;
-    }
-    return channelByName[name];
-};
-
 export function getLocalChannelByNameKey(namekey)
 {
-    return getLocalChannelByName(split(namekey, " ")[0]);
+    if (!namekey) {
+        return meshtasticChannel;
+    }
+    return localChannelByNameKey[namekey];
 };
 
 export function getChannelByNameKey(namekey)
@@ -102,9 +97,9 @@ export function getChannelByNameKey(namekey)
     return channelByNameKey[namekey];
 };
 
-export function getAllChannels()
+export function getAllLocalChannels()
 {
-    return values(channelByName);
+    return values(localChannelByNameKey);
 };
 
 export function getTelemetryChannels()
@@ -121,15 +116,15 @@ export function getTelemetryChannels()
 
 export function updateChannels(channels)
 {
-    const oldChannelByName = channelByName;
-    channelByName = {};
+    const oldLocalChannelByNameKey = localChannelByNameKey;
+    localChannelByNameKey = {};
     for (let i = 0; i < length(channels); i++) {
         setChannel(channels[i]);
     }
     const newchannels = [];
-    for (let name in channelByName) {
-        if (!oldChannelByName[name]) {
-            push(newchannels, channelByName[name]);
+    for (let namekey in localChannelByNameKey) {
+        if (!oldLocalChannelByNameKey[namekey]) {
+            push(newchannels, localChannelByNameKey[namekey]);
         }
     }
     return newchannels;
