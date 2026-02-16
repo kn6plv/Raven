@@ -489,14 +489,16 @@ function updateText(msg)
     if (atbottom && document.visibilityState == "visible") {
         t.lastElementChild.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
         channel.state.cursor = msg.text.id;
+        channel.state.count = 0;
         catchup(channel);
     }
     else {
         textObs.observe(n);
         channel.state.count++;
-        getChannelUnread(channel).innerText = channel.state.count;
         updateTitle();
     }
+    getChannelUnread(channel).innerText = (channel.state.count > 0 ? channel.state.count : "");
+    updateTitle();
 }
 
 function updateState(msg)
