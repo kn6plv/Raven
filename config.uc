@@ -4,6 +4,7 @@ import * as channel from "channel";
 import * as node from "node";
 import * as ipmesh from "ipmesh";
 import * as meshtastic from "meshtastic";
+import * as meshcore from "meshcore";
 import * as websocket from "websocket";
 import * as event from "event";
 
@@ -137,6 +138,8 @@ export function setup()
             break;
     }
 
+    DEBUG0("Configuring\n");
+
     if (config.platform_aredn) {
         global.platform = require(`platforms.aredn.platform`);
     }
@@ -150,6 +153,7 @@ export function setup()
 
     ipmesh.setup(config);
     meshtastic.setup(config);
+    meshcore.setup(config);
     
     event.setup(config);
     global.event = event;
@@ -209,6 +213,7 @@ export function setup()
 
 export function tick()
 {
+    DEBUG0("Tick\n");
     router.tick();
     gc("collect");
 };

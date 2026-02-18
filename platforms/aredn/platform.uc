@@ -21,11 +21,14 @@ const LOCATION_SOURCE_INTERNAL = 2;
 const ucdata = {};
 let bynamekey = {};
 let byid = {};
-let forwarders = [];
 let stores = {};
 let myid;
 let arednmeshEnabled = false;
+let meshtasticEnabled = false;
+let meshcoreEnabled = false;
 let storesEnabled = null;
+let meshtasticForwarders = [];
+let meshcoreForwarders = [];
 const badges = {};
 let watcher = null;
 let maxBinarySize = 1 * 1024 * 1024;
@@ -70,6 +73,10 @@ let maxBinarySize = 1 * 1024 * 1024;
                 storesEnabled = [ "*" ];
             }
         }
+    }
+
+    if (config.meshtastic) {
+        meshtasticEnabled = true;
     }
 
     const freemem = 1024 * match(fs.readfile("/proc/meminfo"), /MemFree: +(\d+) kB/)[1];
@@ -262,8 +269,14 @@ function path(name)
             targets = slice(services);
         }
         if (canforward) {
-            for (let i = 0; i < length(forwarders); i++) {
-                const forwarder = forwarders[i];
+            for (let i = 0; i < length(meshtasticForwarders); i++) {
+                const forwarder = meshtasticForwarders[i];
+                if (index(targets, forwarder) === -1) {
+                    push(targets, forwarder);
+                }
+            }
+            for (let i = 0; i < length(meshcoreForwarders); i++) {
+                const forwarder = meshcoreForwarders[i];
                 if (index(targets, forwarder) === -1) {
                     push(targets, forwarder);
                 }
@@ -292,7 +305,7 @@ function path(name)
         if (target) {
             return [ target ];
         }
-        return canforward ? forwarders : [];
+        return canforward ? uniq([ ...meshtasticForwarders, ...meshcoreForwarders ]) : [];
     }
 }
 
@@ -312,7 +325,25 @@ function path(name)
         return;
     }
     myid = me.id;
-    services.publish(pubID, pubTopic, { id: myid, ip: ucdata.main_ip, role: me.role, key: crypto.pKeyToString(me.private_key), channels: map(channels, c => c.namekey), store: storesEnabled });
+    const info = {
+        id: myid,
+        ip: ucdata.main_ip,
+        key: crypto.pKeyToString(me.private_key),
+        channels: map(channels, c => c.namekey)
+    };
+    if (storesEnabled) {
+        info.store = storesEnabled;
+    }
+    if (meshtasticEnabled || meshcoreEnabled) {
+        info.bridge = [];
+        if (meshtasticEnabled) {
+            push(info.bridge, { meshtastic: {} });
+        }
+        if (meshcoreEnabled) {
+            push(info.bridge, { meshcore: {} });
+        }
+    }
+    services.publish(pubID, pubTopic, info);
 }
 
 /* export */ function badge(key, count)
@@ -364,7 +395,8 @@ function refreshTargets()
     const published = services.published(pubTopic);
     byid = {};
     bynamekey = {};
-    forwarders = [];
+    meshtasticForwarders = [];
+    meshcoreForwarders = [];
     const ostores = sprintf("%J", stores);
     stores = {};
     for (let i = 0; i < length(published); i++) {
@@ -382,8 +414,16 @@ function refreshTargets()
                 nchannels[namekey] = true;
             }
             service.channels = nchannels;
-            if (node.canRoleForward(service.role)) {
-                push(forwarders, service);
+            if (service.bridge) {
+                for (let j = 0; j < length(service.bridge); j++) {
+                    const b = service.bridge[j];
+                    if (b.meshtastic) {
+                        push(meshtasticForwarders, service);
+                    }
+                    if (b.meshcore) {
+                        push(meshcoreForwarders, service);
+                    }
+                }
             }
             if (service.store) {
                 for (let j = 0; j < length(service.store); j++) {

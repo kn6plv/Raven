@@ -10,6 +10,7 @@ import * as crypto from "crypto.crypto";
 
 const PRIVATE_HW = 255;
 const RAVEN_HW = 254;
+const MESHCORE_HW = 253;
 const DEFAULT_INTERVAL = 3 * 60 * 60;
  
 meshtastic.registerProto(
@@ -68,6 +69,19 @@ export function process(msg)
                 }
             }));
         }
+    }
+    else if (msg.data?.advert) {
+        const advert = msg.data.advert;
+        const nodeinfo = {
+            id: sprintf("!%08x", msg.from),
+            long_name: advert.name,
+            short_name: nodedb.longname2shortname(advert.name),
+            hw_model: MESHCORE_HW,
+            role: advert.role,
+            public_key: advert.public_key,
+            is_unmessagable: false
+        };
+        nodedb.updateNodeinfo(msg.from, nodeinfo);
     }
     else if (!nodedb.getNode(msg.from, false) && !node.fromMe(msg)) {
         nodedb.createNode(msg.from);

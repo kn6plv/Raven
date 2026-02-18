@@ -74,6 +74,7 @@ export function addMessage(msg)
             from: msg.from,
             when: msg.rx_time,
             text: msg.data.text_message,
+            textfrom: msg.data.text_from,
             structuredtext: msg.data.structured_text_message,
             replyid: msg.data.reply_id
         });

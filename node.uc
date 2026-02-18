@@ -22,6 +22,8 @@ export const ROLE_TAK_TRACKER = 10;
 export const ROLE_ROUTER_LATE = 11;
 export const ROLE_CLIENT_BASE = 12;
 
+export const ROLE_ROOM = 32;
+
 const DEFAULT_HOPS = 5;
 
 let me = null;
@@ -29,6 +31,7 @@ let fuzzyLocation = null;
 let preciseLocation = null;
 let maxHops = DEFAULT_HOPS;
 
+export const UNKNOWN = 0;
 export const BROADCAST = 0xffffffff;
 
 export function id()
@@ -56,9 +59,14 @@ export function fromMe(msg)
     return msg.from === me.id;
 };
 
-export function canRoleForward(role)
+export function fromUnknown(msg)
 {
-    switch (role) {
+    return msg.from == UNKNOWN;
+};
+
+export function canForward()
+{
+    switch (me.role) {
         case ROLE_CLIENT_MUTE:
         case ROLE_CLIENT_HIDDEN:
         case ROLE_TRACKER:
@@ -68,11 +76,6 @@ export function canRoleForward(role)
         default:
             return true;
     }
-};
-
-export function canForward()
-{
-    return canRoleForward(me.role);
 };
 
 export function hopLimit()

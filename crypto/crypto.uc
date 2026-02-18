@@ -5,6 +5,23 @@ import * as x25519 from "x25519";
 import * as sha256 from "sha256";
 import * as sha1 from "sha1";
 
+export function decryptECB(key, encrypted)
+{
+    let plain = "";
+
+    aes.AES_Init();
+
+    const ekey = aes.AES_ExpandKey(slice(key));
+
+    for (let i = 0; i < length(encrypted); i += 16) {
+        plain += struct.pack("16B", ...aes.AES_Decrypt(struct.unpack("16B", encrypted, i), ekey));
+    }
+
+    aes.AES_Done();
+
+    return plain;
+};
+
 export function decryptCTR(from, id, key, encrypted)
 {
     let plain = "";
@@ -181,6 +198,18 @@ export function getSharedKey(myprivatekey, theirpublickey)
 export function sha256hash(data)
 {
     return sha256.hash(data);
+};
+
+export function sha256hmac(key, data)
+{
+    let okey = "";
+    let ikey = "";
+    for (let i = 0; i < 64; i++) {
+        const val = key[i] ?? 0;
+        okey += chr(val ^ 0x5c);
+        ikey += chr(val ^ 0x36);
+    }
+    return sha256.hash(okey + struct.pack("32B", ...sha256.hash(ikey + data)));
 };
 
 export function sha1hash(data)

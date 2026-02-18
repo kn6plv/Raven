@@ -1,5 +1,7 @@
+import * as struct from "struct";
 import * as timers from "timers";
 import * as node from "node";
+import * as crypto from "crypto.crypto";
 
 const SAVE_INTERVAL = 60;
 
@@ -28,11 +30,40 @@ function saveNode(node)
     event.notify({ cmd: "node", id: node.id }, `node ${node.id}`);
 }
 
+export function longname2shortname(name)
+{
+    return join("", map(split(name, " ", 4), w => substr(w, 0, 1)));
+};
+
+export function getNodeByLongname(longname)
+{
+    for (let k in nodedb) {
+        if (nodedb[k].nodeinfo?.long_name === longname) {
+            return nodedb[k];
+        }
+    }
+    return null;
+};
+
+export function getNodeByPublickey(public_key, create)
+{
+    for (let k in nodedb) {
+        if (nodedb[k].nodeinfo?.public_key === public_key) {
+            return nodedb[k];
+        }
+    }
+    if (create === false) {
+        return null;
+    }
+    return createNode(struct.unpack(">I", public_key)[0]);
+};
+
 export function createNode(id)
 {
     if (!nodedb[id]) {
         saveNode(getNode(id));
     }
+    return nodedb[id];
 };
 
 export function updateNode(node)

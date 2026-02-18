@@ -24,9 +24,14 @@ let rootdir = "/tmp/raven";
 {
 }
 
+function path(name)
+{
+    return `${rootdir}/${replace(name, /\//g, "_")}.json`;
+}
+
 /* export */ function load(name)
 {
-    const data = fs.readfile(`${rootdir}/${name}.json`);
+    const data = fs.readfile(path(name));
     return data ? json(data) : null;
 }
 
@@ -37,7 +42,7 @@ let rootdir = "/tmp/raven";
 
 /* export */ function store(name, data)
 {
-    fs.writefile(`${rootdir}/${name}.json`, sprintf("%.02J", data));
+    fs.writefile(path(name), sprintf("%.02J", data));
 }
 
 /* export */ function storebinary(name, data)

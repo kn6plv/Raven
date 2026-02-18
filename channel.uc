@@ -1,3 +1,6 @@
+import * as struct from "struct";
+import * as crypto from "crypto.crypto";
+
 const meshtasticChannelPresets = [
     "Disabled",
     "ShortTurbo",
@@ -12,7 +15,8 @@ const meshtasticChannelPresets = [
 ];
 
 global.channelByNameKey = {};
-global.channelsByHash = {};
+global.channelsByMeshtasticHash = {};
+global.channelsByMeshcoreHash = {};
 let meshtasticChannel;
 let localChannelByNameKey = {};
 
@@ -31,7 +35,7 @@ function getCryptoKey(key)
     }
 }
 
-function getHash(name, crypto)
+function getMeshtasticHash(name, crypto)
 {
     let hash = 0;
     for (let i = 0; i < length(name); i++) {
@@ -43,6 +47,11 @@ function getHash(name, crypto)
     return hash;
 }
 
+function getMeshcoreHash(key)
+{
+    return crypto.sha256hash(struct.pack(`${length(key)}B`, ...key))[0];
+}
+
 export function addMessageNameKey(namekey)
 {
     if (channelByNameKey[namekey]) {
@@ -50,10 +59,13 @@ export function addMessageNameKey(namekey)
     }
     const nk = split(namekey, " ");
     const crypto = getCryptoKey(nk[1]);
-    const hash = getHash(nk[0], crypto);
-    const chan = { namekey: namekey, crypto: crypto, hash: hash, telemetry: false };
+    const meshtastichash = getMeshtasticHash(nk[0], crypto);
+    const meshcorehash = getMeshcoreHash(crypto);
+    const chan = { namekey: namekey, crypto: crypto, hash: meshtastichash, meshcorehash: meshcorehash, telemetry: false };
     channelByNameKey[namekey] = chan;
-    const bucket = channelsByHash[hash] ?? (channelsByHash[hash] = []);
+    let bucket = channelsByMeshtasticHash[meshtastichash] ?? (channelsByMeshtasticHash[meshtastichash] = []);
+    push(bucket, chan);
+    bucket = channelsByMeshcoreHash[meshcorehash] ?? (channelsByMeshcoreHash[meshcorehash] = []);
     push(bucket, chan);
     return chan;
 };
@@ -73,12 +85,17 @@ function setLocalChannel(config)
     localChannelByNameKey[config.namekey] = chan;
 };
 
-export function getChannelsByHash(hash)
+export function getChannelsByMeshtasticHash(hash)
 {
     if (!hash) {
         return [ meshtasticChannel ];
     }
-    return channelsByHash[hash];
+    return channelsByMeshtasticHash[hash];
+};
+
+export function getChannelsByMeshcoreHash(hash)
+{
+    return channelsByMeshcoreHash[hash];
 };
 
 export function getLocalChannelByNameKey(namekey)

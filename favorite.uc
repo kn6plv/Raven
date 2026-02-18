@@ -1,4 +1,5 @@
 import * as node from "node";
+import * as nodedb from "nodedb";
 
 const favorites = {};
 const zeroCostHops = {};

@@ -1,4 +1,5 @@
 import * as meshtastic from "meshtastic";
+import * as meshcore from "meshcore";
 import * as ipmesh from "ipmesh";
 import * as node from "node";
 import * as socket from "socket";
@@ -49,9 +50,11 @@ export function process()
                 // and we are not ourselves a forwarder (in which case using another would be redundant)
                 ipmesh.send(msg.to, msg, msg.hop_limit > 0 && !node.canForward());
             }
-            if (msg.transport !== "meshtastic" && (node.isBroadcast(msg) || !platform.getTargetById(msg.to))) {
+            if ((msg.transport !== "meshtastic" && msg.transport !== "meshcore") && node.isBroadcast(msg) || !platform.getTargetById(msg.to)) {
                 DEBUG1("Send Meshtastic: %.2J\n", msg);
                 meshtastic.send(msg);
+                DEBUG1("Send Meshcore: %.2J\n", msg);
+                meshcore.send(msg);
             }
         }
     }
@@ -86,6 +89,10 @@ export function tick()
     if (ms) {
         push(sockets, [ ms, socket.POLLIN, "meshtastic" ]);
     }
+    const mc = meshcore.handle();
+    if (mc) {
+        push(sockets, [ mc, socket.POLLIN, "meshcore" ]);
+    }
     const ph = platform.handle();
     if (ph) {
         push(sockets, [ ph, socket.POLLIN|socket.POLLRDHUP, "platform" ]);
@@ -113,6 +120,13 @@ export function tick()
                     }
                     catch (_)
                     {
+                    }
+                    break;
+                case "meshcore":
+                    try {
+                        queue(meshcore.recv());
+                    }
+                    catch (_) {
                     }
                     break;
                 case "platform":

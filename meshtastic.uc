@@ -176,7 +176,7 @@ function decodePacket(pkt)
         }
     }
     else {
-        const hashchannels = channel.getChannelsByHash(msg.channel);
+        const hashchannels = channel.getChannelsByMeshtasticHash(msg.channel);
         if (hashchannels) {
             for (let i = 0; i < length(hashchannels); i++) {
                 const chan = hashchannels[i];

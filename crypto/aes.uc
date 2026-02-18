@@ -221,4 +221,5 @@ export function AES_Decrypt(block, key) {
     AES_SubBytes(block, AES_Sbox_Inv);
   }
   AES_AddRoundKey(block, slice(key, 0, 16));
+  return block;
 };

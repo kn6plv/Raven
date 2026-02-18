@@ -1,0 +1,275 @@
+import * as socket from "socket";
+import * as struct from "struct";
+import * as channel from "channel";
+import * as node from "node";
+import * as nodedb from "nodedb";
+import * as crypto from "crypto.crypto";
+
+// Public - 8b3387e9c5cdea6ac9e5edbaa115cd72 - izOH6cXN6mrJ5e26oRXNcg==
+// #NAME -> sha256(#NAME)[0..15]
+
+const ADDRESS = "224.0.0.69";
+const PORT = 4402;
+
+const ROUTE_TYPE_TRANSPORT_FLOOD = 0x00;
+const ROUTE_TYPE_FLOOD = 0x01;
+const ROUTE_TYPE_DIRECT = 0x02;
+const ROUTE_TYPE_TRANSPORT_DIRECT = 0x03;
+
+const PAYLOAD_TYPE_REQ = 0x00;
+const PAYLOAD_TYPE_RESPONSE = 0x01;
+const PAYLOAD_TYPE_TXT_MSG = 0x02;
+const PAYLOAD_TYPE_ACK = 0x03;
+const PAYLOAD_TYPE_ADVERT = 0x04;
+const PAYLOAD_TYPE_GRP_TXT = 0x05;
+const PAYLOAD_TYPE_GRP_DATA = 0x06;
+const PAYLOAD_TYPE_ANON_REQ = 0x07;
+const PAYLOAD_TYPE_PATH = 0x08;
+const PAYLOAD_TYPE_TRACE = 0x09;
+const PAYLOAD_TYPE_MULTIPART = 0x0a;
+const PAYLOAD_TYPE_CONTROL = 0x0b;
+const PAYLOAD_TYPE_RAW_CUSTOM = 0x0f;
+
+const PAYLOAD_VER_1 = 0x00;
+
+const ADV_TYPE_NONE = 0;
+const ADV_TYPE_CHAT = 1;
+const ADV_TYPE_REPEATER = 2;
+const ADV_TYPE_ROOM = 3;
+const ADV_TYPE_SENSOR = 4;
+
+const ADV_LATLON_MASK = 0x10;
+const ADV_FEAT1_MASK = 0x20;
+const ADV_FEAT2_MASK = 0x40;
+const ADV_NAME_MASK = 0x80;
+
+
+let s = null;
+
+export function setup(config)
+{
+    if (!config.meshcore) {
+        return;
+    }
+    const address = config.meshcore.address;
+    s = socket.create(socket.AF_INET, socket.SOCK_DGRAM, 0);
+    s.bind({
+        port: PORT
+    });
+    if (!address) {
+        s.setopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, {
+            multiaddr: ADDRESS
+        });
+    }
+    else {
+        s.setopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, {
+            address: address
+        });
+        s.setopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, {
+            address: address,
+            multiaddr: ADDRESS
+        });
+    }
+    s.setopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 0);
+    s.listen();
+};
+
+export function handle()
+{
+    return s;
+};
+
+function fletch16(data, offset, count)
+{
+    let sum1 = 0;
+    let sum2 = 0;
+    count += offset;
+    for (let i = offset; i < count; i++) {
+        sum1 = (sum1 + ord(data, i)) % 255;
+        sum2 = (sum1 + sum2) % 255;
+    }
+    return (sum2 << 8) | sum1;
+}
+
+function decodePacket(pkt)
+{
+    print("decode ", pkt, "\n");
+    let offset = 0;
+    const msg = {
+        data: {}
+    };
+    const header = ord(pkt, offset);
+    offset++;
+    switch (header & 0x03) {
+        case ROUTE_TYPE_TRANSPORT_FLOOD:
+            msg.route_type = "transport_flood";
+            msg.to = node.BROADCAST;
+            msg.transport_codes = struct.unpack("<HH", pkt, offset);
+            offset += 4;
+            break;
+        case ROUTE_TYPE_FLOOD:
+            msg.route_type = "flood";
+            msg.to = node.BROADCAST;
+            break;
+        case ROUTE_TYPE_DIRECT:
+            msg.route_type = "direct";
+            break;
+        case ROUTE_TYPE_TRANSPORT_DIRECT:
+            msg.route_type = "transport_direct";
+            msg.transport_codes = struct.unpack("<HH", pkt, offset);
+            offset += 4;
+            break;
+        default:
+            return null;
+    }
+    const type = (header >> 2) & 0x0F;
+    switch ((header >> 6) & 0x03) {
+        case PAYLOAD_VER_1:
+            msg.version = "1";
+            break;
+        default:
+            return null;
+    }
+
+    const pathlen = ord(pkt, offset);
+    msg.path = substr(pkt, offset + 1, pathlen);
+    offset += pathlen + 1;
+
+    msg.pkthash = crypto.sha256hash(chr(type) + (type === PAYLOAD_TYPE_TRACE ? msg.path : "") + substr(pkt, offset));
+    msg.id = (msg.pkthash[0] << 24) | (msg.pkthash[1] << 16) + (msg.pkthash[2] << 8) + msg.pkthash[3];
+
+    switch (type) {
+        case PAYLOAD_TYPE_REQ:
+        case PAYLOAD_TYPE_RESPONSE:
+        case PAYLOAD_TYPE_TXT_MSG:
+        case PAYLOAD_TYPE_ACK:
+            break;
+        case PAYLOAD_TYPE_ADVERT:
+        {
+            const advert = {};
+            msg.data.advert = advert;
+            advert.public_key = substr(pkt, offset, 32);
+            advert.timestamp = struct.unpack("<I", pkt, offset + 32)[0];
+            const signature = struct.unpack("64B", pkt, offset + 36);
+            offset += 100;
+            const type = ord(pkt, offset);
+            offset++;
+            switch (type & 0x0f) {
+                case ADV_TYPE_CHAT:
+                    advert.role = node.ROLE_CLIENT_MUTE;
+                    break;
+                case ADV_TYPE_REPEATER:
+                    advert.role = node.ROLE_REPEATER;
+                    break;
+                case ADV_TYPE_ROOM:
+                    advert.role = node.ROLE_ROOM;
+                    break;
+                case ADV_TYPE_SENSOR:
+                    advert.role = node.ROLE_SENSOR;
+                    break;
+                case ADV_TYPE_NONE:
+                default:
+                    break;
+            }
+            if (type & ADV_LATLON_MASK) {
+                const latlon = struct.unpack("<ii", pkt, offset);
+                advert.position = {
+                    latitude_i: latlon[0],
+                    longitude_i: latlon[1]
+                };
+                offset += 8;
+            }
+            if (type & ADV_FEAT1_MASK) {
+                offset += 2;
+            }
+            if (type & ADV_FEAT2_MASK) {
+                offset += 2;
+            }
+            if (type & ADV_NAME_MASK) {
+                advert.name = substr(pkt, offset);
+            }
+            msg.from = nodedb.getNodeByPublickey(advert.public_key).id;
+            return msg;
+        }
+        case PAYLOAD_TYPE_GRP_TXT:
+        {
+            const channelhash = ord(pkt, offset);
+            const mac = struct.unpack("2B", pkt, offset + 1);
+            const encrypted = substr(pkt, offset + 3);
+            const hashchannels = channel.getChannelsByMeshcoreHash(channelhash);
+            for (let i = 0; i < length(hashchannels); i++) {
+                const key = hashchannels[i].crypto;
+                const hash = crypto.sha256hmac(key, encrypted);
+                if (hash[0] === mac[0] && hash[1] === mac[1]) {
+                    const plain = crypto.decryptECB(key, encrypted);
+                    const timestampAndFlags = struct.unpack("<IB", plain);
+                    if (timestampAndFlags[1] !== 0) {
+                        return null;
+                    }
+                    msg.namekey = hashchannels[i].namekey;
+                    msg.rx_time = timestampAndFlags[0];
+                    const fm = split(substr(plain, 5), ": ", 2);
+                    msg.from = nodedb.getNodeByLongname(fm[0])?.id ?? node.UNKNOWN;
+                    msg.data.text_message = rtrim(fm[1], "\u0000");
+                    msg.data.text_from = fm[0];
+                    print(msg, "\n");
+                    return msg;
+                }
+            }
+            break;
+        }
+        case PAYLOAD_TYPE_GRP_DATA:
+        case PAYLOAD_TYPE_ANON_REQ:
+        case PAYLOAD_TYPE_PATH:
+        case PAYLOAD_TYPE_TRACE:
+        case PAYLOAD_TYPE_MULTIPART:
+        case PAYLOAD_TYPE_CONTROL:
+        case PAYLOAD_TYPE_RAW_CUSTOM:
+        default:
+            break;
+    }
+
+    return null;
+}
+
+function makeNativeMsg(data)
+{
+    const header = struct.unpack(">HH", data);
+    const chksum = struct.unpack(">H", data, length(data) - 2);
+    if (header[0] !== 0xC03E || header[1] + 6 !== length(data) || chksum[0] !== fletch16(data, 4, header[1])) {
+        return null;
+    }
+    try {
+        return decodePacket(substr(data, 4, length(data) - 6));
+    }
+    catch (e) {
+        print(e, "\n");
+        return null;
+    }
+}
+
+function makeMeshcoreMsg(msg)
+{
+    return null;
+}
+
+export function recv()
+{
+    return makeNativeMsg(s.recvmsg(512).data);
+};
+
+export function send(msg)
+{
+    if (s !== null) {
+        const pkt = makeMeshcoreMsg(msg);
+        if (pkt) {
+            const r = s.send(pkt, 0, {
+                address: ADDRESS,
+                port: PORT
+            });
+            if (r == null) {
+                DEBUG0("meshcore:send error: %s\n", socket.error());
+            }
+        }
+    }
+};
