@@ -366,14 +366,21 @@ function updateNode(msg)
         nl.insertBefore(nd, nl.firstElementChild);
     }
     else {
-        const n = I(msg.node.id);
+        const s = I("nodes-scroll");
+        const c = s.getBoundingClientRect();
+        let n = I(msg.node.id);
         if (n) {
-            nl.replaceChild(nd, n);
+            const r = n.getBoundingClientRect();
+            if (r.bottom >= c.top && r.top < c.bottom) {
+                nl.replaceChild(nd, n);
+            }
+            else {
+                nl.removeChild(n);
+                n = null;
+            }
         }
-        else {
+        if (!n) {
             nl.insertBefore(nd, nl.firstElementChild);
-            const s = I("nodes-scroll");
-            const c = s.getBoundingClientRect();
             const r = nd.getBoundingClientRect();
             if (r.bottom >= c.top && r.top < c.bottom) {
                 nd.classList.add("fade");
