@@ -30,9 +30,12 @@ function saveNode(node)
     event.notify({ cmd: "node", id: node.id }, `node ${node.id}`);
 }
 
-export function longname2shortname(name)
+export function createNode(id)
 {
-    return join("", map(split(name, " ", 4), w => substr(w, 0, 1)));
+    if (!nodedb[id]) {
+        saveNode(getNode(id));
+    }
+    return nodedb[id];
 };
 
 export function getNodeByLongname(longname)
@@ -58,14 +61,6 @@ export function getNodeByPublickey(public_key, create)
     return createNode(struct.unpack(">I", public_key)[0]);
 };
 
-export function createNode(id)
-{
-    if (!nodedb[id]) {
-        saveNode(getNode(id));
-    }
-    return nodedb[id];
-};
-
 export function updateNode(node)
 {
     saveNode(node);
@@ -74,14 +69,30 @@ export function updateNode(node)
 export function updateNodeinfo(id, nodeinfo)
 {
     const node = getNode(id);
-    node.nodeinfo = nodeinfo;
+    if (!node.nodeinfo) {
+        node.nodeinfo = nodeinfo;
+    }
+    else {
+        const cnodeinfo = node.nodeinfo;
+        for (let k in nodeinfo) {
+            cnodeinfo[k] = nodeinfo[k];
+        }
+    }
     saveNode(node);
 };
 
 export function updatePosition(id, position)
 {
     const node = getNode(id);
-    node.position = position;
+    if (!node.position) {
+        node.position = position;
+    }
+    else {
+        const cposition = node.position;
+        for (let k in position) {
+            cposition[k] = position[k];
+        }
+    }
     saveNode(node);
 };
 
