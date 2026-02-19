@@ -22,6 +22,23 @@ export function decryptECB(key, encrypted)
     return plain;
 };
 
+export function encryptECB(key, plain)
+{
+    let encrypted = "";
+
+    aes.AES_Init();
+
+    const ekey = aes.AES_ExpandKey(slice(key));
+
+    for (let i = 0; i < length(plain); i += 16) {
+        encrypted += struct.pack("16B", ...aes.AES_Encrypt(struct.unpack("16B", plain, i), ekey));
+    }
+
+    aes.AES_Done();
+
+    return encrypted;
+};
+
 export function decryptCTR(from, id, key, encrypted)
 {
     let plain = "";
@@ -193,6 +210,16 @@ export function getSharedKey(myprivatekey, theirpublickey)
         str += chr(v & 255, (v >> 8) & 255);
     }
     return str;
+};
+
+export function sign(privatekey, plain)
+{
+    return null;
+};
+
+export function verify(publickey, plain, signature)
+{
+    return true;
 };
 
 export function sha256hash(data)
