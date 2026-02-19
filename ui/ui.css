@@ -467,7 +467,7 @@ a
 {
     max-width: 80%;
     font-size: 12px;
-    margin: 7px auto 2px 20px;
+    margin: 7px auto 4px 20px;
 }
 .text .r::before
 {
@@ -522,7 +522,7 @@ a
 }
 .text .l
 {
-    font-size: 11px;
+    font-size: 12px;
     padding-left: 6px;
 }
 .text.right .l
@@ -536,6 +536,7 @@ a
     margin: auto 0 0 0;
     color: var(--text-date-color);
     font-size: 10px;
+    padding-bottom: 1px;
 }
 .text .t,
 .text .i,

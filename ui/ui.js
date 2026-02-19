@@ -168,7 +168,7 @@ function htmlNodeDetail(node)
             <div class="m">
                 <div class="l">${node.long_name}<div class="star ${node.favorite}" onclick="toggleFav(event,${node.num})"></div></div>
                 <div class="r"><div>User Id</div><div>${node.id}</div></div>
-                <div class="r"><div>Platform</div><div>${node.hw == "aredn" ? "AREDN" : "Meshtastic"}</div></div>
+                <div class="r"><div>Platform</div><div>${node.hw == "aredn" ? "AREDN" : node.hw == "meshcore" ? "MeshCore" : "Meshtastic"}</div></div>
                 <div class="r"><div>Public Key</div><div>${node.public_key}</div></div>
                 ${hops}
                 <div class="r"><div>Role</div><div>${node.rolename}</div></div>
@@ -233,9 +233,9 @@ function htmlText(text, useimage)
         ${reply}
         <div>
             <div class="s" style="color:${n.colors.fcolor};background-color:${n.colors.bcolor}">${n.short_name}</div>
-            ${n?.hw ? '<div class="logo"></div>' : ''}
+            ${n.hw ? '<div class="logo"></div>' : ''}
             <div class="c">
-                <div class="l">${T(n.long_name + " (" + n.id + ")")} ${n ? "<div>&nbsp;" + (new Date(1000 * text.when).toLocaleString()) + "</div>" : ''}</div>
+                <div class="l">${T(n.long_name)}<div>&nbsp;${new Date(1000 * text.when).toLocaleString()}</div></div>
                 ${textmsg}
             </div>
         </div>
