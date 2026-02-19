@@ -200,15 +200,19 @@ export function setup()
 
     function shutdown()
     {
+        DEBUG0("Shutting down\n");
         nodedb.shutdown();
         textmessage.shutdown();
         textstore.shutdown();
         platform.shutdown();
+        DEBUG0("Shutdown\n");
         exit(0);
     }
     signal("SIGHUP", shutdown);
     signal("SIGINT", shutdown);
     signal("SIGTERM", shutdown);
+
+    DEBUG0("Configured\n");
 };
 
 export function tick()
