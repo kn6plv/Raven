@@ -51,10 +51,11 @@ export function process()
                 ipmesh.send(msg.to, msg, msg.hop_limit > 0 && !node.canForward());
             }
             if ((msg.transport !== "meshtastic" && msg.transport !== "meshcore") && node.isBroadcast(msg) || !platform.getTargetById(msg.to)) {
-                DEBUG1("Send Meshtastic: %.2J\n", msg);
-                meshtastic.send(msg);
                 DEBUG1("Send Meshcore: %.2J\n", msg);
                 meshcore.send(msg);
+                // Meshtastic modifies the message so much come last
+                DEBUG1("Send Meshtastic: %.2J\n", msg);
+                meshtastic.send(msg);
             }
         }
     }
