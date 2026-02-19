@@ -11,6 +11,8 @@ import * as crypto from "crypto.crypto";
 const ADDRESS = "224.0.0.69";
 const PORT = 4402;
 
+const HW_MESCORE = 253;
+
 const ROUTE_TYPE_TRANSPORT_FLOOD = 0x00;
 const ROUTE_TYPE_FLOOD = 0x01;
 const ROUTE_TYPE_DIRECT = 0x02;
@@ -91,6 +93,11 @@ function fletch16(data, offset, count)
     return (sum2 << 8) | sum1;
 }
 
+function sendDirect(msg)
+{
+    return node.fromMe(msg) && !node.isBroadcast(msg) && (!msg.namekey || channel.isDirect(msg.namekey));
+}
+
 function decodePacket(pkt)
 {
     print("decode ", pkt, "\n");
@@ -148,10 +155,18 @@ function decodePacket(pkt)
         {
             const advert = {};
             msg.data.advert = advert;
+            advert.hw_model = HW_MESCORE;
+            advert.is_unmessagable = true;
             advert.public_key = substr(pkt, offset, 32);
             advert.timestamp = struct.unpack("<I", pkt, offset + 32)[0];
             const signature = struct.unpack("64B", pkt, offset + 36);
             offset += 100;
+
+            const plain = advert.public_key + struct.pack("<I", advert.timestamp) + substr(pkt, offset);
+            if (!crypto.verify(advert.public_key, plain, signature)) {
+                return null;
+            }
+
             const type = ord(pkt, offset);
             offset++;
             switch (type & 0x0f) {
@@ -174,8 +189,8 @@ function decodePacket(pkt)
             if (type & ADV_LATLON_MASK) {
                 const latlon = struct.unpack("<ii", pkt, offset);
                 advert.position = {
-                    latitude_i: latlon[0],
-                    longitude_i: latlon[1]
+                    latitude_i: latlon[0] * 10,
+                    longitude_i: latlon[1] * 10
                 };
                 offset += 8;
             }
@@ -199,8 +214,8 @@ function decodePacket(pkt)
             const hashchannels = channel.getChannelsByMeshcoreHash(channelhash);
             for (let i = 0; i < length(hashchannels); i++) {
                 const key = hashchannels[i].crypto;
-                const hash = crypto.sha256hmac(key, encrypted);
-                if (hash[0] === mac[0] && hash[1] === mac[1]) {
+                const hmac = crypto.sha256hmac(key, encrypted);
+                if (hmac[0] === mac[0] && hmac[1] === mac[1]) {
                     const plain = crypto.decryptECB(key, encrypted);
                     const timestampAndFlags = struct.unpack("<IB", plain);
                     if (timestampAndFlags[1] !== 0) {
@@ -250,7 +265,64 @@ function makeNativeMsg(data)
 
 function makeMeshcoreMsg(msg)
 {
-    return null;
+    let pkt = null;
+
+    if (msg.data?.advert) {
+        const advert = msg.data.advert;
+
+        let type = ADV_LATLON_MASK | ADV_NAME_MASK;
+        switch (advert.type) {
+            case node.ROLE_REPEATER:
+            case node.ROLE_CLIENT:
+                type |= ADV_TYPE_REPEATER;
+                break;
+            case node.ROLE_ROOM:
+                type |= ADV_TYPE_ROOM;
+                break;
+            case node.ROLE_SENSOR:
+                type |= ADV_TYPE_SENSOR;
+                break;
+             case node.ROLE_CLIENT_MUTE:
+             default:
+                type |= ADV_TYPE_CHAT;
+                break;
+        }
+        const appdata = struct.pack("<Bii", type, advert.position.latitude_i / 10, advert.position.longitude_i / 10) + advert.name;
+
+        const plain = advert.public_key + struct.pack("<I", msg.rx_time) + appdata;
+        const fromprivate = node.fromMe(msg) ? node.getInfo().private_key : platform.getTargetById(msg.from)?.key;
+        const signature = crypto.sign(fromprivate, plain);
+
+        pkt = struct.pack("2B", (PAYLOAD_VER_1 << 6) | (PAYLOAD_TYPE_ADVERT << 2) | ROUTE_TYPE_FLOOD, 0) +
+            advert.public_key + struct.pack("<I", msg.rx_time) + signature + appdata;
+    }
+    else if (msg.data?.text_message) {
+        if (sendDirect(msg)) {
+            return null;
+        }
+        else {
+            const chan = channel.getChannelByNameey(msg.namekey);
+            if (chan) {
+                const name = nodedb.getNode(msg.from, false)?.nodeinfo?.long_name ?? msg.data.text_from ?? `${msg.from}`;
+                let plain = struct.pack("<IB", msg.rx_time, 0) + `${name}: ${msg.data.text_message}`;
+                while (length(plain) % 32 != 0) {
+                    plain += "\u0000";
+                }
+                const encrypted = crypto.encryptECB(chan.crypto, plain);
+                const hmac = crypto.sha256hmac(chan.crypto, encrypted);
+
+                pkt = struct.pack("2B", (PAYLOAD_VER_1 << 6) | (PAYLOAD_TYPE_GRP_TXT << 2) | ROUTE_TYPE_FLOOD, 0) +
+                    struct.pack("3B", chan.meshcorehash, ...hmac) + encrypted;
+            }
+        }
+    }
+
+    if (!pkt) {
+        return null;
+    }
+
+    const len = length(pkt);
+    return struct.pack(">HH", 0xC03E, len) + pkt + struct.pack(">H", fletch16(pkt, 0, len));
 }
 
 export function recv()
