@@ -138,11 +138,14 @@ function syncMessages()
 function checkMissing(msg)
 {
     if (msg.data.last_id && !textmessage.getMessage(msg.namekey, msg.data.last_id)) {
-        router.queue(message.createMessage(to, null, msg.namekey, "textstore_resend", {
-            namekey: msg.namekey,
-            cursor: msg.data.last_id,
-            limit: 1
-        }));
+        const stores = platform.getStoresByNamekey(msg.namekey);
+        if (stores[0]) {
+            router.queue(message.createMessage(store[0].id, null, msg.namekey, "textstore_resend", {
+                namekey: msg.namekey,
+                cursor: msg.data.last_id,
+                limit: 1
+            }));
+        }
     }
 }
 
