@@ -52,7 +52,7 @@ export function notify(event, mergekey)
 
 function longname2shortname(name)
 {
-    return join("", map(split(name, " "), w => substr(w, 0, 1)));
+    return join("", map(match(name, /(^|\s)[a-zA-Z0-9]/g), v => trim(v[0])));
 }
 
 function basicNode(node)
