@@ -301,7 +301,7 @@ function makeMeshcoreMsg(msg)
             return null;
         }
         else {
-            const chan = channel.getChannelByNameey(msg.namekey);
+            const chan = channel.getChannelByNameKey(msg.namekey);
             if (chan) {
                 const name = nodedb.getNode(msg.from, false)?.nodeinfo?.long_name ?? msg.data.text_from ?? `${msg.from}`;
                 let plain = struct.pack("<IB", msg.rx_time, 0) + `${name}: ${msg.data.text_message}`;
