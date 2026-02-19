@@ -48,6 +48,20 @@ function createNodeinfoMessage(to, namekey, extra)
     }, extra);
 }
 
+function createAdvertMessage()
+{
+    const me = node.getInfo();
+    const loc = node.getLocation(true);
+    return message.createMessage(null, null, null, "advert", {
+        role: me.role,
+        name: me.long_name,
+        position: {
+            latitude_i: int(loc.lat * 10000000),
+            longitude_i: int(loc.lon * 10000000)
+        }
+    });
+}
+
 export function tick()
 {
     if (timers.tick("nodeinfo")) {
@@ -55,6 +69,7 @@ export function tick()
         for (let i = 0; i < length(telemetry); i++) {
             router.queue(createNodeinfoMessage(null, telemetry[i].namekey, null));
         }
+        router.queue(createAdvertMessage());
     }
 };
 
@@ -72,16 +87,17 @@ export function process(msg)
     }
     else if (msg.data?.advert) {
         const advert = msg.data.advert;
-        const nodeinfo = {
+        nodedb.updateNodeinfo(msg.from, {
             id: sprintf("!%08x", msg.from),
             long_name: advert.name,
-            short_name: nodedb.longname2shortname(advert.name),
-            hw_model: MESHCORE_HW,
+            hw_model: advert.hw_model,
             role: advert.role,
             public_key: advert.public_key,
-            is_unmessagable: false
-        };
-        nodedb.updateNodeinfo(msg.from, nodeinfo);
+            is_unmessagable: advert.is_unmessagable
+        });
+        if (advert.position) {
+            nodedb.updatePosition(msg.from, advert.position);
+        }
     }
     else if (!nodedb.getNode(msg.from, false) && !node.fromMe(msg)) {
         nodedb.createNode(msg.from);
