@@ -25,7 +25,7 @@ export function setup(config)
 
 function send(msg, to)
 {
-    DEBUG1("send ", msg, "\n");
+    DEBUG1("send %J\n", msg);
     websocket.send(to, sprintf("%J", msg));
     if (!to) {
         activity = true;
@@ -50,6 +50,11 @@ export function notify(event, mergekey)
     timers.trigger("event");
 };
 
+function longname2shortname(name)
+{
+    return join("", map(split(name, " "), w => substr(w, 0, 1)));
+}
+
 function basicNode(node)
 {
     const nodeinfo = node?.nodeinfo;
@@ -58,7 +63,7 @@ function basicNode(node)
             id: nodeinfo.id,
             num: node.id,
             favorite: node.favorite,
-            short_name: nodeinfo.short_name,
+            short_name: nodeinfo.short_name ?? longname2shortname(nodeinfo.long_name),
             long_name: nodeinfo.long_name,
             role: nodeinfo.role ?? 0,
             lastseen: node.lastseen,
@@ -81,12 +86,12 @@ function fullNode(node)
             id: nodeinfo.id,
             num: node.id,
             favorite: node.favorite,
-            short_name: nodeinfo.short_name,
+            short_name: nodeinfo.short_name ?? longname2shortname(nodeinfo.long_name),
             long_name: nodeinfo.long_name,
             role: nodeinfo.role ?? 0,
             lastseen: node.lastseen,
             hops: node.hops,
-            hw: nodeinfo.hw_model === HW_AREDN ? "aredn" : "meshtastic",
+            hw: nodeinfo.hw_model === HW_AREDN ? "aredn" : nodeinfo.hw_model === HW_MESHCORE ? "meshcore" : "meshtastic",
             is_unmessagable: nodeinfo.is_unmessagable,
             public_key: b64enc(nodeinfo.public_key),
             state: textmessage.state(nodedb.namekey(node.id))
