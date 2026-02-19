@@ -203,11 +203,20 @@ function htmlText(text, useimage)
             };
         }
     }
+    let plaintext = T(text.text);
     let reply = "";
     if (text.replyid) {
         const r = texts.findLast(t => t.id == text.replyid);
         if (r) {
             reply = `<div class="r"><div>${T(r.text.replace(/\n/g," "))}</div></div>`;
+        }
+    }
+    else if (plaintext.indexOf("@[") === 0) {
+        const end = plaintext.indexOf("]");
+        if (end !== -1) {
+            const r = plaintext.substring(2, end);
+            reply = `<div class="r"><div>${r}</div></div>`;
+            plaintext = plaintext.substring(end + 1);
         }
     }
     let textmsg = null;
@@ -227,7 +236,7 @@ function htmlText(text, useimage)
         }
     }
     if (!textmsg) {
-        textmsg = `<div class="b"><div class="ack ${text.ack ? 'true' : ''}"></div><div class="t">` + T(text.text).replace(/https?:\/\/[^ \t<]+/g, v => `<a target="_blank" href="${v}">${v}</a>`) + '</div><a href="#" class="re" onclick="setupReply(event)">Reply</a></div>';
+        textmsg = `<div class="b"><div class="ack ${text.ack ? 'true' : ''}"></div><div class="t">` + plaintext.replace(/https?:\/\/[^ \t<]+/g, v => `<a target="_blank" href="${v}">${v}</a>`) + '</div><a href="#" class="re" onclick="setupReply(event)">Reply</a></div>';
     }
     return `<div id="${text.id}" class="text ${n.num == me.num ? 'right ' : ''}${n.hw ? n.hw : ''}">
         ${reply}
