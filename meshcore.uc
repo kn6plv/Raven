@@ -13,6 +13,8 @@ const PORT = 4402;
 
 const HW_MESCORE = 253;
 
+const MAX_TEXT_MESSAGE_LENGTH = 155;
+
 const ROUTE_TYPE_TRANSPORT_FLOOD = 0x00;
 const ROUTE_TYPE_FLOOD = 0x01;
 const ROUTE_TYPE_DIRECT = 0x02;
@@ -227,7 +229,6 @@ function decodePacket(pkt)
                     msg.from = nodedb.getNodeByLongname(fm[0])?.id ?? node.UNKNOWN;
                     msg.data.text_message = rtrim(fm[1], "\u0000");
                     msg.data.text_from = fm[0];
-                    print(msg, "\n");
                     return msg;
                 }
             }
@@ -258,7 +259,7 @@ function makeNativeMsg(data)
         return decodePacket(substr(data, 4, length(data) - 6));
     }
     catch (e) {
-        print(e, "\n");
+        DEBUG0("meshcore:makeNativeMsg error: %s\n", e.stacktrace);
         return null;
     }
 }
@@ -304,7 +305,14 @@ function makeMeshcoreMsg(msg)
             const chan = channel.getChannelByNameKey(msg.namekey);
             if (chan) {
                 const name = nodedb.getNode(msg.from, false)?.nodeinfo?.long_name ?? msg.data.text_from ?? `${msg.from}`;
-                let plain = struct.pack("<IB", msg.rx_time, 0) + `${name}: ${msg.data.text_message}`;
+                let text = `${name}: ${msg.data.text_message}`;
+                if (msg.data.reply_id) {
+                    const reply = nodedb.getNode(msg.data.reply_id, false)?.nodeinfo?.long_name;
+                    if (reply) {
+                        text = `@[${reply}]${text}`;
+                    }
+                }
+                let plain = struct.pack("<IB", msg.rx_time, 0) + substr(text, 0, MAX_TEXT_MESSAGE_LENGTH);
                 while (length(plain) % 32 != 0) {
                     plain += "\u0000";
                 }
