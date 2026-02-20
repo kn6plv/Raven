@@ -23,6 +23,7 @@ export const ROLE_ROUTER_LATE = 11;
 export const ROLE_CLIENT_BASE = 12;
 
 export const ROLE_ROOM = 32;
+export const ROLE_COMPANION = 33;
 
 const DEFAULT_HOPS = 5;
 
@@ -72,6 +73,7 @@ export function canForward()
         case ROLE_TRACKER:
         case ROLE_LOST_AND_FOUND:
         case ROLE_SENSOR:
+        case ROLE_COMPANION:
             return false;
         default:
             return true;

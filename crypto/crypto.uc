@@ -2,6 +2,7 @@ import * as struct from "struct";
 import * as math from "math";
 import * as aes from "aes";
 import * as x25519 from "x25519";
+import * as ed25519 from "ed25519";
 import * as sha256 from "sha256";
 import * as sha1 from "sha1";
 
@@ -212,9 +213,9 @@ export function getSharedKey(myprivatekey, theirpublickey)
     return str;
 };
 
-export function sign(privatekey, plain)
+export function sign(privatekey, publickey, plain)
 {
-    return null;
+    return ed25519.sign(privatekey, publickey, plain);
 };
 
 export function verify(publickey, plain, signature)

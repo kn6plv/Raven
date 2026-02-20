@@ -39,7 +39,9 @@ const roles = {
     9: "Lost and Found",
     10: "Tak Tracker",
     11: "Router Late",
-    12: "Client Base"
+    12: "Client Base",
+    32: "Room",
+    33: "Companion"
 };
 
 function Q(a, b)
@@ -186,18 +188,16 @@ function htmlText(text, useimage)
         if (text.from) {
             const id = text.from.toString(16);
             n = {
-                id: `!${id}`,
                 short_name: id.substr(-4),
                 long_name: id.substr(-4),
                 colors: nodeColors(text.from)
             };
         }
         else {
-            const hash = sha256(text.textfrom);
+            const hash = sha256(text.textfrom.replace(/[^\x00-\x7F]/g, ""));
             const from = (hash[0] << 24) + (hash[1] << 16) + (hash[2] << 8) + hash[3];
             n = {
-                id: `!${from.toString(16)}`,
-                short_name: text.textfrom.split(" ").map(w => w[0]).join(""),
+                short_name: text.textfrom.split(" ").map(w => w.charCodeAt(0) < 127 ? w[0] : "").join(""),
                 long_name: text.textfrom,
                 colors: nodeColors(from)
             };

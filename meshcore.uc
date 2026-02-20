@@ -47,8 +47,8 @@ const ADV_FEAT1_MASK = 0x20;
 const ADV_FEAT2_MASK = 0x40;
 const ADV_NAME_MASK = 0x80;
 
-
 let s = null;
+let bridge = ADDRESS;
 
 export function setup(config)
 {
@@ -56,6 +56,9 @@ export function setup(config)
         return;
     }
     const address = config.meshcore.address;
+    if (config.meshcore.bridge) {
+        bridge = config.meshcore.bridge;
+    }
     s = socket.create(socket.AF_INET, socket.SOCK_DGRAM, 0);
     s.bind({
         port: PORT
@@ -173,7 +176,7 @@ function decodePacket(pkt)
             offset++;
             switch (type & 0x0f) {
                 case ADV_TYPE_CHAT:
-                    advert.role = node.ROLE_CLIENT_MUTE;
+                    advert.role = node.ROLE_COMPANION;
                     break;
                 case ADV_TYPE_REPEATER:
                     advert.role = node.ROLE_REPEATER;
@@ -284,6 +287,7 @@ function makeMeshcoreMsg(msg)
                 type |= ADV_TYPE_SENSOR;
                 break;
              case node.ROLE_CLIENT_MUTE:
+             case node.ROLE_COMPANION:
              default:
                 type |= ADV_TYPE_CHAT;
                 break;
@@ -292,10 +296,11 @@ function makeMeshcoreMsg(msg)
 
         const plain = advert.public_key + struct.pack("<I", msg.rx_time) + appdata;
         const fromprivate = node.fromMe(msg) ? node.getInfo().private_key : platform.getTargetById(msg.from)?.key;
-        const signature = crypto.sign(fromprivate, plain);
+        const frompublic = node.fromMe(msg) ? node.getInfo().public_key : nodedb.getNode(msg.from)?.nodeinfo?.public_key;
+        const signature = crypto.sign(fromprivate, frompublic, plain);
 
         pkt = struct.pack("2B", (PAYLOAD_VER_1 << 6) | (PAYLOAD_TYPE_ADVERT << 2) | ROUTE_TYPE_FLOOD, 0) +
-            advert.public_key + struct.pack("<I", msg.rx_time) + signature + appdata;
+            advert.public_key + struct.pack("<I", msg.rx_time) + struct.pack("32B", ...signature) + appdata;
     }
     else if (msg.data?.text_message) {
         if (sendDirect(msg)) {
@@ -344,7 +349,7 @@ export function send(msg)
         const pkt = makeMeshcoreMsg(msg);
         if (pkt) {
             const r = s.send(pkt, 0, {
-                address: ADDRESS,
+                address: bridge,
                 port: PORT
             });
             if (r == null) {
