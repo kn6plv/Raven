@@ -133,7 +133,7 @@ function htmlChannel(channel)
 function htmlNode(node)
 {
     const namekey = `DirectMessages ${node.num}`;
-    const filter = `${node.short_name} ${node.long_name}`.toLowerCase();
+    const filter = `${node.short_name} ${node.long_name} ${node.hw}`.toLowerCase();
     let filtered = false;
     if (activeFilter && filter.indexOf(activeFilter) === -1) {
         filtered = true;
