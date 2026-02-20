@@ -196,8 +196,17 @@ function htmlText(text, useimage)
         else {
             const hash = sha256(text.textfrom.replace(/[^\x00-\x7F]/g, ""));
             const from = (hash[0] << 24) + (hash[1] << 16) + (hash[2] << 8) + hash[3];
+            const shortwords = text.textfrom.split(" ");
+            let short_name = "";
+            const shortwords0 = Array.from(shortwords[0])[0];
+            if (shortwords0.codePointAt(0) > 128) {
+                short_name = shortwords0;
+            }
+            else {
+                short_name = shortwords.map(w => w.charCodeAt(0) < 127 ? w[0] : "").join("").substring(0, 4);
+            }
             n = {
-                short_name: text.textfrom.split(" ").map(w => w.charCodeAt(0) < 127 ? w[0] : "").join(""),
+                short_name: short_name,
                 long_name: text.textfrom,
                 colors: nodeColors(from)
             };
