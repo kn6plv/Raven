@@ -55,6 +55,7 @@ function createAdvertMessage()
     return message.createMessage(null, null, null, "advert", {
         role: me.role,
         name: me.long_name,
+        public_key: crypto.pKeyToString(me.public_key),
         position: {
             latitude_i: int(loc.lat * 10000000),
             longitude_i: int(loc.lon * 10000000)
@@ -69,7 +70,8 @@ export function tick()
         for (let i = 0; i < length(telemetry); i++) {
             router.queue(createNodeinfoMessage(null, telemetry[i].namekey, null));
         }
-        router.queue(createAdvertMessage());
+        // Not yet supported
+        //router.queue(createAdvertMessage());
     }
 };
 
