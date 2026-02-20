@@ -51,7 +51,7 @@ function addMessage(msg)
 {
     const store = loadStore(msg.namekey);
     if (!indexes[msg.namekey][msg.id]) {
-        indexs[msg.namekey][msg.id] = true;
+        indexes[msg.namekey][msg.id] = true;
         msg.stored = true;
         push(store.messages, json(sprintf("%J", msg)));
         sort(store.messages, (a, b) => a.rx_time - b.rx_time);
