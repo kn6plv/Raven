@@ -108,26 +108,45 @@ export function tick()
     for (let i = 0; i < length(v); i++) {
         if (v[i] && v[i][1]) {
             switch (v[i][2]) {
+                case "websocket":
+                {
+                    const msgs = websocket.recv(v[i][0]);
+                    for (let i = 0; i < length(msgs); i++) {
+                        const msg = msgs[i];
+                        if (msg.text) {
+                            const j = json(msg.text);
+                            j.socket = msg.socket;
+                            event.queue(j);
+                        }
+                        else if (msg.binary) {
+                            event.queue({ cmd: "upload", binary: msg.binary, socket: msg.socket });
+                        }
+                    }
+                    break;
+                }
                 case "ipmesh":
                     try {
                         queue(ipmesh.recv());
                     }
-                    catch (_) {
+                    catch (e) {
+                        DEBUG0("ipmesh recv: %s\n", e.stacktrace);
                     }
                     break;
                 case "meshtastic":
                     try {
                         queue(meshtastic.recv());
                     }
-                    catch (_)
+                    catch (e)
                     {
+                        DEBUG0("meshtastic recv: %s\n", e.stacktrace);
                     }
                     break;
                 case "meshcore":
                     try {
                         queue(meshcore.recv());
                     }
-                    catch (_) {
+                    catch (e) {
+                        DEBUG0("meshcore recv: %s\n", e.stacktrace);
                     }
                     break;
                 case "platform":
@@ -135,22 +154,6 @@ export function tick()
                     platform.handleChanges();
                     break;
                 }
-                case "websocket":
-                    {
-                        const msgs = websocket.recv(v[i][0]);
-                        for (let i = 0; i < length(msgs); i++) {
-                            const msg = msgs[i];
-                            if (msg.text) {
-                                const j = json(msg.text);
-                                j.socket = msg.socket;
-                                event.queue(j);
-                            }
-                            else if (msg.binary) {
-                                event.queue({ cmd: "upload", binary: msg.binary, socket: msg.socket });
-                            }
-                        }
-                    }
-                    break;
             }
         }
     }
