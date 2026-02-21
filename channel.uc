@@ -64,7 +64,7 @@ export function addMessageNameKey(namekey)
     const meshcorehash = getMeshcoreHash(skey);
     const chan = { namekey: namekey, symmetrickey: skey, meshtastichash: meshtastichash, meshcorehash: meshcorehash, telemetry: false };
     channelByNameKey[namekey] = chan;
-    push(channelsByMeshtasticHash[meshtastichash] ?? (channelsByMeshtasticHash[meshtastichash] = []). chan);
+    push(channelsByMeshtasticHash[meshtastichash] ?? (channelsByMeshtasticHash[meshtastichash] = []), chan);
     push(channelsByMeshcoreHash[meshcorehash] ?? (channelsByMeshcoreHash[meshcorehash] = []), chan);
     return chan;
 };
