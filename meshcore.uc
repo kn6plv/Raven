@@ -270,6 +270,7 @@ function makeNativeMsg(data)
 function makeMeshcoreMsg(msg)
 {
     let pkt = null;
+    const path = chr(1) + substr(node.getInfo().mc_public_key, 0, 1);
 
     if (msg.data?.advert) {
         const advert = msg.data.advert;
@@ -298,7 +299,7 @@ function makeMeshcoreMsg(msg)
         const fromprivate = node.fromMe(msg) ? node.getInfo().private_key : platform.getTargetById(msg.from)?.private_key;
         const signature = crypto.sign(fromprivate, advert.public_key, plain);
 
-        pkt = struct.pack("2B", (PAYLOAD_VER_1 << 6) | (PAYLOAD_TYPE_ADVERT << 2) | ROUTE_TYPE_FLOOD, 0) +
+        pkt = chr((PAYLOAD_VER_1 << 6) | (PAYLOAD_TYPE_ADVERT << 2) | ROUTE_TYPE_FLOOD) + path +
             advert.public_key + struct.pack("<I", msg.rx_time) + signature + appdata;
     }
     else if (msg.data?.text_message) {
@@ -323,8 +324,8 @@ function makeMeshcoreMsg(msg)
                 const encrypted = crypto.encryptECB(chan.symmetrickey, plain);
                 const hmac = crypto.sha256hmac(chan.symmetrickey, encrypted);
 
-                pkt = struct.pack("2B", (PAYLOAD_VER_1 << 6) | (PAYLOAD_TYPE_GRP_TXT << 2) | ROUTE_TYPE_FLOOD, 0) +
-                    struct.pack("3B", chan.meshcorehash, ...hmac) + encrypted;
+                pkt = chr((PAYLOAD_VER_1 << 6) | (PAYLOAD_TYPE_GRP_TXT << 2) | ROUTE_TYPE_FLOOD) + path +
+                    struct.pack("3B", chan.meshcorehash, hmac[0], hmac[1]) + encrypted;
             }
         }
     }
