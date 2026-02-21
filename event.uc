@@ -88,7 +88,7 @@ function fullNode(node)
             hops: node.hops,
             hw: nodeinfo.hw_model === HW_AREDN ? "aredn" : nodeinfo.hw_model === HW_MESHCORE ? "meshcore" : "meshtastic",
             is_unmessagable: nodeinfo.is_unmessagable,
-            public_key: b64enc(nodeinfo.public_key),
+            public_key: nodeinfo.hw_model == HW_MESHCORE ? hexenc(nodeinfo.mc_public_key) : b64enc(nodeinfo.public_key),
             state: textmessage.state(nodedb.namekey(node.id))
         };
         const latitude_i = node.position?.latitude_i;
