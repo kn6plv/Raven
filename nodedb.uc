@@ -1,9 +1,9 @@
 import * as struct from "struct";
 import * as timers from "timers";
 import * as node from "node";
-import * as crypto from "crypto.crypto";
 
 const SAVE_INTERVAL = 60;
+const KEEP_WINDOW = 7 * 24 * 60 * 60; // 7 days
 
 let nodedb;
 
@@ -13,9 +13,20 @@ export function setup(config)
     timers.setInterval("nodedb", SAVE_INTERVAL);
 };
 
+function saveDB()
+{
+    const window = time() - KEEP_WINDOW;
+    for (let id in nodedb) {
+        if (nodedb[id].lastseen < window) {
+            delete nodedb[id];
+        }
+    }
+    platform.store("nodedb", nodedb);
+}
+
 export function shutdown()
 {
-    platform.store("nodedb", nodedb);
+    saveDB();
 };
 
 export function getNode(id, create)
@@ -135,7 +146,7 @@ export function namekey(id)
 export function tick()
 {
     if (timers.tick("nodedb")) {
-        platform.store("nodedb", nodedb);
+        saveDB();
     }
 };
 
