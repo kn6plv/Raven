@@ -2,9 +2,28 @@ import * as struct from "struct";
 import * as math from "math";
 import * as aes from "aes";
 import * as x25519 from "x25519";
-import * as ed25519 from "ed25519";
+import * as usign from "usign";
 import * as sha256 from "sha256";
 import * as sha1 from "sha1";
+
+function pKeyToString(key)
+{
+    let str = "";
+    for (let i = 0; i < length(key); i++) {
+        const v = key[i];
+        str += chr(v & 255, (v >> 8) & 255);
+    }
+    return str;
+}
+
+function stringToPKey(str)
+{
+    const key = [];
+    for (let i = 0; i < length(str); i += 2) {
+        push(key, ord(str, i) | (ord(str, i + 1) << 8));
+    }
+    return key;
+}
 
 export function decryptECB(key, encrypted)
 {
@@ -190,21 +209,19 @@ export function encryptCCM(from, id, key, plain, xnonce, authlen)
     return encrypted + auth;
 };
 
-export function generateKeyPair()
+export function generateKeys()
 {
-    const kprivate = [];
-    for (let i = 0; i < 16; i++) {
-        kprivate[i] = ((math.rand() & 255) << 8) | (math.rand() & 255);
-    }
+    const keys = usign.ed25519GenerateKeys();
     return {
-        private: kprivate,
-        public: x25519.curve25519(kprivate)
+        private: keys.private_key,
+        edpublic: keys.public_key,
+        xpublic: pKeyToString(x25519.curve25519(stringToPKey(keys.private_key)))
     };
 };
 
 export function getSharedKey(myprivatekey, theirpublickey)
 {
-    const key = x25519.curve25519(myprivatekey, theirpublickey);
+    const key = x25519.curve25519(stringToPKey(myprivatekey), stringToPKey(theirpublickey));
     let str = "";
     for (let i = 0; i < length(key); i++) {
         const v = key[i];
@@ -215,12 +232,12 @@ export function getSharedKey(myprivatekey, theirpublickey)
 
 export function sign(privatekey, publickey, plain)
 {
-    return ed25519.sign(privatekey, publickey, plain);
+    return usign.ed25519Sign(privatekey, publickey, plain);
 };
 
 export function verify(publickey, plain, signature)
 {
-    return true;
+    return usign.ed25519Verify(publickey, plain, signature);
 };
 
 export function sha256hash(data)
@@ -243,23 +260,4 @@ export function sha256hmac(key, data)
 export function sha1hash(data)
 {
     return sha1.hash(data);
-};
-
-export function pKeyToString(key)
-{
-    let str = "";
-    for (let i = 0; i < length(key); i++) {
-        const v = key[i];
-        str += chr(v & 255, (v >> 8) & 255);
-    }
-    return str;
-};
-
-export function stringToPKey(str)
-{
-    const key = [];
-    for (let i = 0; i < length(str); i += 2) {
-        push(key, ord(str, i) | (ord(str, i + 1) << 8));
-    }
-    return key;
 };

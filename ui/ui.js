@@ -114,10 +114,25 @@ function nodeColors(n)
     }
 }
 
+function makeShortName(longname)
+{
+    const shortwords = longname.split(" ");
+    const shortwords0 = Array.from(shortwords[0])[0];
+    if (shortwords0.codePointAt(0) > 128) {
+        return shortwords0;
+    }
+    else {
+        return shortwords.map(w => w.charCodeAt(0) < 127 ? w[0] : "").join("").substring(0, 4);
+    }
+}
+
 function nodeExpand(node)
 {
     node.colors = nodeColors(node.num);
     node.rolename = node.hw === "aredn" ? "AREDN" : roles[node.role] ? roles[node.role] : "?";
+    if (!node.short_name) {
+        node.short_name = makeShortName(node.long_name);
+    }
     return node;
 }
 
@@ -196,15 +211,7 @@ function htmlText(text, useimage)
         else {
             const hash = sha256(text.textfrom.replace(/[^\x00-\x7F]/g, ""));
             const from = (hash[0] << 24) + (hash[1] << 16) + (hash[2] << 8) + hash[3];
-            const shortwords = text.textfrom.split(" ");
-            let short_name = "";
-            const shortwords0 = Array.from(shortwords[0])[0];
-            if (shortwords0.codePointAt(0) > 128) {
-                short_name = shortwords0;
-            }
-            else {
-                short_name = shortwords.map(w => w.charCodeAt(0) < 127 ? w[0] : "").join("").substring(0, 4);
-            }
+            const short_name = makeShortName(text.textfrom);
             n = {
                 short_name: short_name,
                 long_name: text.textfrom,

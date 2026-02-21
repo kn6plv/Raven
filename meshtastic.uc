@@ -107,10 +107,10 @@ const sharedKeys = {};
 
 function getSharedKey(priv, pub)
 {
-    const hkey = `${crypto.pKeyToString(priv)}${pub}`;
+    const hkey = `${priv}${pub}`;
     let sharedkey = sharedKeys[hkey];
     if (!sharedkey) {
-        sharedkey = crypto.getSharedKey(priv, crypto.stringToPKey(pub));
+        sharedkey = crypto.getSharedKey(priv, pub);
         sharedKeys[hkey] = sharedkey;
     }
     return sharedkey;
@@ -160,7 +160,7 @@ function decodePacket(pkt)
     }
     if (recvDirect(msg)) {
         const frompublic = nodedb.getNode(msg.from)?.nodeinfo?.public_key;
-        const toprivate = node.toMe(msg) ? node.getInfo().private_key : platform.getTargetById(msg.to)?.key;
+        const toprivate = node.toMe(msg) ? node.getInfo().private_key : platform.getTargetById(msg.to)?.private_key;
         if (frompublic && toprivate) {
             const sharedkey = getSharedKey(toprivate, frompublic);
             const hash = crypto.sha256hash(sharedkey);
@@ -180,7 +180,7 @@ function decodePacket(pkt)
         if (hashchannels) {
             for (let i = 0; i < length(hashchannels); i++) {
                 const chan = hashchannels[i];
-                msg.decoded = crypto.decryptCTR(msg.from, msg.id, chan.crypto, msg.encrypted);
+                msg.decoded = crypto.decryptCTR(msg.from, msg.id, chan.symmetrickey, msg.encrypted);
                 msg.namekey = chan.namekey;
                 if (decodePacketData(msg)) {
                     delete msg.encrypted;
@@ -219,7 +219,7 @@ function encodePacket(msg)
     if (direct) {
         delete msg.channel;
         const topublic = nodedb.getNode(msg.to)?.nodeinfo?.public_key;
-        const fromprivate = node.fromMe(msg) ? node.getInfo().private_key : platform.getTargetById(msg.from)?.key;
+        const fromprivate = node.fromMe(msg) ? node.getInfo().private_key : platform.getTargetById(msg.from)?.private_key;
         if (topublic && fromprivate) {
             const sharedkey = getSharedKey(fromprivate, topublic);
             const hash = crypto.sha256hash(sharedkey);
@@ -232,7 +232,7 @@ function encodePacket(msg)
     else {
         const chan = channel.getChannelByNameKey(msg.namekey);
         if (chan) {
-            msg.encrypted = crypto.encryptCTR(msg.from, msg.id, chan.crypto, msg.decoded);
+            msg.encrypted = crypto.encryptCTR(msg.from, msg.id, chan.symmetrickey, msg.decoded);
             delete msg.decoded;
             return protobuf.encode(protos, "packet", msg);
         }
@@ -289,7 +289,7 @@ function makeMeshtasticMsg(msg)
         if (!chan) {
             return null;
         }
-        msg.channel = chan.hash;
+        msg.channel = chan.meshtastichash;
     }
     msg.rx_snr = 0;
     msg.rx_rssi = 0;

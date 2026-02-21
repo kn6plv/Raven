@@ -50,11 +50,6 @@ export function notify(event, mergekey)
     timers.trigger("event");
 };
 
-function longname2shortname(name)
-{
-    return join("", map(match(name, /(^|\s)[a-zA-Z0-9]/g), v => trim(v[0])));
-}
-
 function basicNode(node)
 {
     const nodeinfo = node?.nodeinfo;
@@ -63,7 +58,7 @@ function basicNode(node)
             id: nodeinfo.id,
             num: node.id,
             favorite: node.favorite,
-            short_name: nodeinfo.short_name ?? longname2shortname(nodeinfo.long_name),
+            short_name: nodeinfo.short_name,
             long_name: nodeinfo.long_name,
             role: nodeinfo.role ?? 0,
             lastseen: node.lastseen,
@@ -86,7 +81,7 @@ function fullNode(node)
             id: nodeinfo.id,
             num: node.id,
             favorite: node.favorite,
-            short_name: nodeinfo.short_name ?? longname2shortname(nodeinfo.long_name),
+            short_name: nodeinfo.short_name,
             long_name: nodeinfo.long_name,
             role: nodeinfo.role ?? 0,
             lastseen: node.lastseen,

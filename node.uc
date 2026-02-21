@@ -93,14 +93,15 @@ function save()
 function createNode(config)
 {
     const id = config.macaddress ?? [ math.rand() & 255, math.rand() & 255, math.rand() & 255, math.rand() & 255, math.rand() & 255, math.rand() & 255 ];
-    const keypair = crypto.generateKeyPair();
+    const allkeys = crypto.generateKeys();
     me = {
         id: (id[2] << 24) + (id[3] << 16) + (id[4] << 8) + id[5],
         long_name: sprintf("Raven %02x%02x", id[4], id[5]),
         short_name: sprintf("%02x%02x", id[4], id[5]),
         macaddr: struct.pack("6B", id[0], id[1], id[2], id[3], id[4], id[5]),
-        private_key: keypair.private,
-        public_key: keypair.public,
+        private_key: allkeys.private,
+        public_key: allkeys.xpublic,
+        mc_public_key: allkeys.edpublic,
         lat: null,
         lon: null,
         alt: null,

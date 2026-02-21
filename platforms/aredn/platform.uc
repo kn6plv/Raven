@@ -328,7 +328,7 @@ function path(name)
     const info = {
         id: myid,
         ip: ucdata.main_ip,
-        key: crypto.pKeyToString(me.private_key),
+        private_key: me.private_key,
         channels: map(channels, c => c.namekey)
     };
     if (storesEnabled) {

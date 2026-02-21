@@ -105,7 +105,7 @@ function sendDirect(msg)
 
 function decodePacket(pkt)
 {
-    print("decode ", pkt, "\n");
+    //print("decode ", pkt, "\n");
     let offset = 0;
     const msg = {
         data: {}
@@ -164,7 +164,7 @@ function decodePacket(pkt)
             advert.is_unmessagable = true;
             advert.public_key = substr(pkt, offset, 32);
             advert.timestamp = struct.unpack("<I", pkt, offset + 32)[0];
-            const signature = struct.unpack("64B", pkt, offset + 36);
+            const signature = substr(pkt, offset + 36, 64);
             offset += 100;
 
             const plain = advert.public_key + struct.pack("<I", advert.timestamp) + substr(pkt, offset);
@@ -218,7 +218,7 @@ function decodePacket(pkt)
             const encrypted = substr(pkt, offset + 3);
             const hashchannels = channel.getChannelsByMeshcoreHash(channelhash);
             for (let i = 0; i < length(hashchannels); i++) {
-                const key = hashchannels[i].crypto;
+                const key = hashchannels[i].symmetrickey;
                 const hmac = crypto.sha256hmac(key, encrypted);
                 if (hmac[0] === mac[0] && hmac[1] === mac[1]) {
                     const plain = crypto.decryptECB(key, encrypted);
@@ -295,12 +295,11 @@ function makeMeshcoreMsg(msg)
         const appdata = struct.pack("<Bii", type, advert.position.latitude_i / 10, advert.position.longitude_i / 10) + advert.name;
 
         const plain = advert.public_key + struct.pack("<I", msg.rx_time) + appdata;
-        const fromprivate = node.fromMe(msg) ? node.getInfo().private_key : platform.getTargetById(msg.from)?.key;
-        const frompublic = node.fromMe(msg) ? node.getInfo().public_key : nodedb.getNode(msg.from)?.nodeinfo?.public_key;
-        const signature = crypto.sign(fromprivate, frompublic, plain);
+        const fromprivate = node.fromMe(msg) ? node.getInfo().private_key : platform.getTargetById(msg.from)?.private_key;
+        const signature = crypto.sign(fromprivate, advert.public_key, plain);
 
         pkt = struct.pack("2B", (PAYLOAD_VER_1 << 6) | (PAYLOAD_TYPE_ADVERT << 2) | ROUTE_TYPE_FLOOD, 0) +
-            advert.public_key + struct.pack("<I", msg.rx_time) + struct.pack("32B", ...signature) + appdata;
+            advert.public_key + struct.pack("<I", msg.rx_time) + signature + appdata;
     }
     else if (msg.data?.text_message) {
         if (sendDirect(msg)) {
@@ -321,8 +320,8 @@ function makeMeshcoreMsg(msg)
                 while (length(plain) % 32 != 0) {
                     plain += "\u0000";
                 }
-                const encrypted = crypto.encryptECB(chan.crypto, plain);
-                const hmac = crypto.sha256hmac(chan.crypto, encrypted);
+                const encrypted = crypto.encryptECB(chan.symmetrickey, plain);
+                const hmac = crypto.sha256hmac(chan.symmetrickey, encrypted);
 
                 pkt = struct.pack("2B", (PAYLOAD_VER_1 << 6) | (PAYLOAD_TYPE_GRP_TXT << 2) | ROUTE_TYPE_FLOOD, 0) +
                     struct.pack("3B", chan.meshcorehash, ...hmac) + encrypted;

@@ -13,6 +13,7 @@ const meshtasticChannelPresets = [
     "LongMod",
     "LongTurbo"
 ];
+const meshcorePublicChannel = "izOH6cXN6mrJ5e26oRXNcg==";
 
 global.channelByNameKey = {};
 global.channelsByMeshtasticHash = {};
@@ -20,7 +21,7 @@ global.channelsByMeshcoreHash = {};
 let meshtasticChannel;
 let localChannelByNameKey = {};
 
-function getCryptoKey(key)
+function expandSymmetricKey(key)
 {
     key = b64dec(key);
     if (length(key) === 1) {
@@ -58,15 +59,13 @@ export function addMessageNameKey(namekey)
         return channelByNameKey[namekey];
     }
     const nk = split(namekey, " ");
-    const crypto = getCryptoKey(nk[1]);
-    const meshtastichash = getMeshtasticHash(nk[0], crypto);
-    const meshcorehash = getMeshcoreHash(crypto);
-    const chan = { namekey: namekey, crypto: crypto, hash: meshtastichash, meshcorehash: meshcorehash, telemetry: false };
+    const skey = expandSymmetricKey(nk[1]);
+    const meshtastichash = getMeshtasticHash(nk[0], skey);
+    const meshcorehash = getMeshcoreHash(skey);
+    const chan = { namekey: namekey, symmetrickey: skey, meshtastichash: meshtastichash, meshcorehash: meshcorehash, telemetry: false };
     channelByNameKey[namekey] = chan;
-    let bucket = channelsByMeshtasticHash[meshtastichash] ?? (channelsByMeshtasticHash[meshtastichash] = []);
-    push(bucket, chan);
-    bucket = channelsByMeshcoreHash[meshcorehash] ?? (channelsByMeshcoreHash[meshcorehash] = []);
-    push(bucket, chan);
+    push(channelsByMeshtasticHash[meshtastichash] ?? (channelsByMeshtasticHash[meshtastichash] = []). chan);
+    push(channelsByMeshcoreHash[meshcorehash] ?? (channelsByMeshcoreHash[meshcorehash] = []), chan);
     return chan;
 };
 
@@ -74,10 +73,13 @@ function setLocalChannel(config)
 {
     const name = split(config.namekey, " ")[0];
     const chan = addMessageNameKey(config.namekey);
-    if (chan.crypto[-1] === 1 && index(meshtasticChannelPresets, name) !== -1) {
+    if (chan.symmetrickey[-1] === 1 && index(meshtasticChannelPresets, name) !== -1) {
         chan.meshtastic = true;
         chan.telemetry = true;
         meshtasticChannel = chan;
+    }
+    if (split(config.namekey, " ")[1] === meshcorePublicChannel) {
+        chan.meshcore = true;
     }
     if (config.telemetry !== null) {
         chan.telemetry = config.telemetry;
