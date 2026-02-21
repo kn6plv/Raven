@@ -218,12 +218,14 @@ export function process(msg)
     if (enabled) {
         if (msg.data?.text_message) {
             addMessage(msg);
-            router.queue(message.createMessage(msg.from, null, msg.namekey, "textstore_ack", {
-                id: msg.id
-            }, {
-                hop_start: 0,
-                hop_limit: 0
-            }));
+            if (msg.transport === "native") {
+                router.queue(message.createMessage(msg.from, null, msg.namekey, "textstore_ack", {
+                    id: msg.id
+                }, {
+                    hop_start: 0,
+                    hop_limit: 0
+                }));
+            }
         }
         else if (msg.data?.textstore_resend) {
             resendMessages(msg);
