@@ -94,7 +94,8 @@ export function process(msg)
             hw_model: advert.hw_model,
             role: advert.role,
             mc_public_key: advert.public_key,
-            is_unmessagable: advert.is_unmessagable
+            is_unmessagable: advert.is_unmessagable,
+            path: msg.path
         });
         if (advert.position) {
             nodedb.updatePosition(msg.from, advert.position);
