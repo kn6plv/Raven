@@ -155,6 +155,9 @@ function decodePacketData(msg)
 function decodePacket(pkt)
 {
     const msg = protobuf.decode(protos, "packet", pkt);
+    // Set the hop_limit to 1 to prevent this from being routed back out to meshtastic or meshcore
+    msg.hop_limit = 1;
+    msg.transport = "meshtastic";
     if (!msg.encrypted) {
         return decodePacketData(msg);
     }
@@ -275,11 +278,7 @@ export function handle()
 
 function makeNativeMsg(data)
 {
-    const msg = decodePacket(data);
-    if (msg) {
-        msg.transport = "meshtastic";
-    }
-    return msg;
+    return decodePacket(data);
 }
 
 function makeMeshtasticMsg(msg)

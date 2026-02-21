@@ -108,7 +108,10 @@ function decodePacket(pkt)
     //print("decode ", pkt, "\n");
     let offset = 0;
     const msg = {
-        data: {}
+        // Set the hop_limit to 1 to prevent this from being routed back out to meshcore or meshtastic
+        hop_limit: 1,
+        data: {},
+        transport: "meshcore"
     };
     const header = ord(pkt, offset);
     offset++;
