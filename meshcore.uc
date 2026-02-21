@@ -275,7 +275,7 @@ function makeMeshcoreMsg(msg)
         const advert = msg.data.advert;
 
         let type = ADV_LATLON_MASK | ADV_NAME_MASK;
-        switch (advert.type) {
+        switch (advert.role) {
             case node.ROLE_REPEATER:
             case node.ROLE_CLIENT:
                 type |= ADV_TYPE_REPEATER;
