@@ -201,10 +201,10 @@ export function setup()
     function shutdown()
     {
         DEBUG0("Shutting down\n");
+        platform.shutdown();
         nodedb.shutdown();
         textmessage.shutdown();
         textstore.shutdown();
-        platform.shutdown();
         DEBUG0("Shutdown\n");
         exit(0);
     }

@@ -32,6 +32,7 @@ let meshcoreForwarders = [];
 const badges = {};
 let watcher = null;
 let maxBinarySize = 1 * 1024 * 1024;
+let inShutdown = false;
 
 /* export */ function setup(config)
 {
@@ -98,6 +99,7 @@ let maxBinarySize = 1 * 1024 * 1024;
 
 /* export */ function shutdown()
 {
+    inShutdown = true;
     services.unpublish(pubID);
     if (watcher) {
         services.unwatch(watcher);
@@ -213,8 +215,23 @@ function path(name)
         fs.unlink(`${p}~`);
         fs.rename(p, `${p}~`);
     }
-    fs.writefile(p, sprintf("%.02J", data));
-    fs.unlink(`${p}~`);
+    if (name === "nodedb" && !inShutdown) {
+        // Special handling because this gets very big
+        // and big flash writes block the app for too long
+        const filename = "/tmp/raven.nodedb";
+        const f = fs.open(filename, "w");
+        f.write("{\n");
+        for (let id in data) {
+            f.write(`  "${id}": ${sprintf("%J", data[id])},\n`)
+        }
+        f.write("}\n");
+        f.close();
+        system(`(cp -fp ${filename} ${p}; rm -f ${p}~) &`);
+    }
+    else {
+        fs.writefile(p, sprintf("%.02J", data));
+        fs.unlink(`${p}~`);
+    }
 }
 
 /* export */ function storebinary(name, data)
