@@ -44,18 +44,62 @@ export function process()
                     continue;
                 }
             }
-            if (msg.transport !== "ipmesh") {
-                DEBUG1("Send IPMesh: %.2J\n", msg);
-                // Include forwarding nodes when sending the message if the hop_limit allows it
-                // and we are not ourselves a forwarder (in which case using another would be redundant)
-                ipmesh.send(msg.to, msg, msg.hop_limit > 0 && !node.canForward());
+
+            // Determine which interfaces we can route the packet out on.
+            // msg.transport == the way the message entered the system, "native" indicating it originated natively and didn't
+            // arrive via a bridge.
+            let toip = false;
+            let tomeshtastic = false;
+            let tomeshcore = false;
+            // If we know where the msg goes, it goes vi IP
+            if (platform.getTargetById(msg.to)) {
+                toip = true;
             }
-            if ((msg.transport !== "meshtastic" && msg.transport !== "meshcore") && node.isBroadcast(msg) || !platform.getTargetById(msg.to)) {
-                DEBUG1("Send Meshcore: %.2J\n", msg);
-                meshcore.send(msg);
-                // Meshtastic modifies the message so much come last
-                DEBUG1("Send Meshtastic: %.2J\n", msg);
-                meshtastic.send(msg);
+            // Otherwise if it's from me, then it goes everywhere
+            else if (node.fromMe(msg)) {
+                toip = true;
+                tomeshtastic = true;
+                tomeshcore = true;
+            }
+            // If the message originated natively, it can go to one of the bridges. Note that we dont sent traffic
+            // from one bridge to another (no meshtastic <-> meshcore bridging) at the moment.
+            else if (msg.transport === "native") {
+                tomeshtastic = true;
+                tomeshcore = true;
+            }
+            // Incoming bridge traffic can only route via IP
+            else {
+                toip = true;
+            }
+
+            if (toip) {
+                try {
+                    DEBUG1("Send IPMesh: %.2J\n", msg);
+                    // Include forwarding nodes when sending the message if the hop_limit allows it
+                    ipmesh.send(msg.to, msg, msg.hop_limit > 0);
+                }
+                catch (e) {
+                    DEBUG0("ipmesh recv: %s\n", e.stacktrace);
+                }
+            }
+            if (tomeshcore) {
+                try {
+                    DEBUG1("Send Meshcore: %.2J\n", msg);
+                    meshcore.send(msg);
+                }
+                catch (e) {
+                    DEBUG0("ipmesh recv: %s\n", e.stacktrace);
+                }
+            }
+            // Meshtastic modifies the message so much come last
+            if (tomeshtastic) {
+                try {
+                    DEBUG1("Send Meshtastic: %.2J\n", msg);
+                    meshtastic.send(msg);
+                }
+                catch (e) {
+                    DEBUG0("ipmesh recv: %s\n", e.stacktrace);
+                }
             }
         }
     }

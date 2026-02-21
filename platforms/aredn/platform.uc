@@ -78,6 +78,9 @@ let maxBinarySize = 1 * 1024 * 1024;
     if (config.meshtastic) {
         meshtasticEnabled = true;
     }
+    if (config.meshcore) {
+        meshcoreEnabled = true;
+    }
 
     const freemem = 1024 * match(fs.readfile("/proc/meminfo"), /MemFree: +(\d+) kB/)[1];
     const binarymem = freemem * MAX_BINARY_MEM;
@@ -262,51 +265,36 @@ function path(name)
 
 /* export */ function getTargetsByIdAndNamekey(id, namekey, canforward)
 {
+    let targets = [];
     if (id === node.BROADCAST) {
-        let targets = [];
         const services = bynamekey[namekey];
         if (services) {
             targets = slice(services);
         }
-        if (canforward) {
-            for (let i = 0; i < length(meshtasticForwarders); i++) {
-                const forwarder = meshtasticForwarders[i];
-                if (index(targets, forwarder) === -1) {
-                    push(targets, forwarder);
-                }
-            }
-            for (let i = 0; i < length(meshcoreForwarders); i++) {
-                const forwarder = meshcoreForwarders[i];
-                if (index(targets, forwarder) === -1) {
-                    push(targets, forwarder);
-                }
-            }
-        }
         let store = stores[namekey];
         if (store) {
-            for (let i = 0; i < length(store); i++) {
-                if (index(targets, store[i]) === -1) {
-                    push(targets, store[i]);
-                }
-            }
+            targets = [ ...targets, ...store ];
         }
         store = stores["*"];
         if (store) {
-            for (let i = 0; i < length(store); i++) {
-                if (index(targets, store[i]) === -1) {
-                    push(targets, store[i]);
-                }
-            }
+            targets = [ ...targets, ...store ];
         }
-        return targets;
     }
     else {
         const target = byid[id];
         if (target) {
             return [ target ];
         }
-        return canforward ? uniq([ ...meshtasticForwarders, ...meshcoreForwarders ]) : [];
     }
+    if (canforward) {
+        if (!meshtasticEnabled) {
+            targets = [ ...targets, ...meshtasticForwarders ];
+        }
+        if (!meshcoreEnabled) {
+            targets = [ ...targets, ...meshcoreForwarders ];
+        }
+    }
+    return uniq(targets);
 }
 
 /* export */ function getTargetById(id)

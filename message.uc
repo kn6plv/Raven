@@ -36,6 +36,7 @@ export function createMessage(to, from, namekey, type, payload, extra)
         hop_limit: hops,
         priority: DEFAULT_PRIORITY,
         hop_start: hops,
+        transport: "native",
         data: {
             [type]: payload
         }

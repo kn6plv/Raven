@@ -30,7 +30,6 @@ export function recv()
         if (!platform.getTargetById(msg.from)) {
             platform.refresh();
         }
-        msg.transport = "ipmesh";
         return msg;
     }
     catch (_) {
