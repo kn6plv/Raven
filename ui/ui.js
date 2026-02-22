@@ -228,12 +228,16 @@ function htmlText(text, useimage)
         }
     }
     else if (plaintext.indexOf("@[") === 0) {
-        const end = plaintext.indexOf("]");
-        if (end !== -1) {
-            const r = plaintext.substring(2, end);
-            reply = `<div class="r"><div>${r}</div></div>`;
-            plaintext = plaintext.substring(end + 1);
+        const rs = [];
+        while (plaintext.indexOf("@[") === 0) {
+            const end = plaintext.indexOf("]");
+            if (end === -1) {
+                break;
+            }
+            rs.push(plaintext.substring(2, end))
+            plaintext = plaintext.substring(end + 1).trim();
         }
+        reply = `<div class="r"><div>${rs.join(" | ")}</div></div>`;
     }
     let textmsg = null;
     const structuredtext = text.structuredtext && text.structuredtext[0];
