@@ -226,7 +226,7 @@ function path(name)
         }
         f.write("}\n");
         f.close();
-        system(`(cp -fp ${filename} ${p}; rm -f ${p}~) &`);
+        system(`(mv -f ${filename} ${p}; rm -f ${p}~) &`);
     }
     else {
         fs.writefile(p, sprintf("%.02J", data));
