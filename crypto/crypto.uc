@@ -1,29 +1,9 @@
 import * as struct from "struct";
-import * as math from "math";
 import * as aes from "aes";
-import * as x25519 from "x25519";
+import * as x25519 from "curve25519";
 import * as usign from "usign";
 import * as sha256 from "sha256";
 import * as sha1 from "sha1";
-
-function pKeyToString(key)
-{
-    let str = "";
-    for (let i = 0; i < length(key); i++) {
-        const v = key[i];
-        str += chr(v & 255, (v >> 8) & 255);
-    }
-    return str;
-}
-
-function stringToPKey(str)
-{
-    const key = [];
-    for (let i = 0; i < length(str); i += 2) {
-        push(key, ord(str, i) | (ord(str, i + 1) << 8));
-    }
-    return key;
-}
 
 export function decryptECB(key, encrypted)
 {
@@ -215,19 +195,13 @@ export function generateKeys()
     return {
         private: keys.private_key,
         edpublic: keys.public_key,
-        xpublic: pKeyToString(x25519.curve25519(stringToPKey(keys.private_key)))
+        xpublic: struct.pack("<16H", ...x25519.curve25519(struct.unpack("<16H", keys.private_key)))
     };
 };
 
 export function getSharedKey(myprivatekey, theirpublickey)
 {
-    const key = x25519.curve25519(stringToPKey(myprivatekey), stringToPKey(theirpublickey));
-    let str = "";
-    for (let i = 0; i < length(key); i++) {
-        const v = key[i];
-        str += chr(v & 255, (v >> 8) & 255);
-    }
-    return str;
+    return struct.pack("<16H", ...x25519.curve25519(struct.unpack("<16H", myprivatekey), struct.unpack("<16H", (theirpublickey))));
 };
 
 export function sign(privatekey, publickey, plain)
@@ -238,6 +212,16 @@ export function sign(privatekey, publickey, plain)
 export function verify(publickey, plain, signature)
 {
     return usign.ed25519Verify(publickey, plain, signature);
+};
+
+export function ed25519_privkey_to_x25519(key)
+{
+    return x25519.ed25519_privkey_to_x25519(key);
+};
+
+export function ed25519_pubkey_to_x25519(key)
+{
+    return x25519.ed25519_pubkey_to_x25519(key);
 };
 
 export function sha256hash(data)
