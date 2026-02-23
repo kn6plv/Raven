@@ -76,7 +76,8 @@ export function addMessage(msg)
             text: msg.data.text_message,
             textfrom: msg.data.text_from,
             structuredtext: msg.data.structured_text_message,
-            replyid: msg.data.reply_id
+            replyid: msg.data.reply_id,
+            checksum: msg.data.checksum
         });
         saveMessages(msg.namekey);
         event.notify({ cmd: "text", namekey: msg.namekey, id: msg.id }, `text ${msg.namekey} ${msg.id}`);

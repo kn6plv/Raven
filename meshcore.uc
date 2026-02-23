@@ -87,9 +87,12 @@ function getRecentKeys(fromhash, tohash)
 
 function addRecentKey(from, to, sharedkey)
 {
-    const hkey = `${ord(from.nodeinfo.mc_public_key)}:${ord(to.nodeinfo.mc_public_key)}`;
-    const list = recentKeys[hkey] ?? (recentKeys[hkey] = []);
-    push(list, { from: from, to: to, key: sharedkey });
+    const fromhash = ord(from.nodeinfo.mc_public_key);
+    const tohash = ord(to.nodeinfo.mc_public_key);
+    const hkey = `${fromhash}:${tohash}`;
+    const rkey = `${tohash}:${fromhash}`;
+    push(recentKeys[hkey] ?? (recentKeys[hkey] = []), { from: from, to: to, key: sharedkey });
+    push(recentKeys[rkey] ?? (recentKeys[rkey] = []), { from: to, to: from, key: sharedkey });
 }
 
 export function setup(config)
@@ -199,6 +202,7 @@ function decodePacket(pkt)
         case PAYLOAD_TYPE_PATH:
         case PAYLOAD_TYPE_REQ:
         case PAYLOAD_TYPE_RESPONSE:
+            break;
         case PAYLOAD_TYPE_TXT_MSG:
         {
             const tohash = ord(pkt, offset);
@@ -209,6 +213,7 @@ function decodePacket(pkt)
             let secretkey = null;
             let fnode = null;
             let tnode = null;
+            const me = node.getInfo();
 
             const recents = getRecentKeys(fromhash, tohash);
             if (recents) {
@@ -226,27 +231,30 @@ function decodePacket(pkt)
             if (!secretkey) {
                 const fromnodes = nodedb.getNodesByPublickeyHash(fromhash, false);
                 const tonodes = nodedb.getNodesByPublickeyHash(tohash, true);
-                if (ord(node.getInfo().mc_public_key) === tohash) {
+                if (!me.is_unmessagable && ord(me.mc_public_key) === tohash) {
                     push(tonodes, {
                         me: true,
                         id: node.id(),
-                        nodeinfo: node.getInfo()
+                        nodeinfo: me
                     });
                 }
                 for (let i = 0; i < length(fromnodes) && !secretkey; i++) {
                     fnode = fromnodes[i];
-                    const fpublic = fnode.nodeinfo.mc_public_key;
-                    for (let j = 0; j < length(tonodes); j++) {
-                        tnode = tonodes[j];
-                        const tprivate = tnode.me ? tnode.nodeinfo.private_key : platform.getTargetById(tnode.id)?.private_key;
-                        if (!tprivate) {
-                            return null;
-                        }
-                        const key = getSharedKey(tprivate, fpublic);
-                        const hmac = crypto.sha256hmac(key, encrypted);
-                        if (hmac[0] === mac[0] && hmac[1] === mac[1]) {
-                            secretkey = key;
-                            break;
+                    if (!fnode.nodeinfo.is_unmessagable) {
+                        const frompublic = fnode.nodeinfo.mc_public_key;
+                        for (let j = 0; j < length(tonodes); j++) {
+                            tnode = tonodes[j];
+                            if (!tnode.nodeinfo.is_unmessagable) {
+                                const toprivate = tnode.me ? tnode.nodeinfo.private_key : platform.getTargetById(tnode.id)?.private_key;
+                                if (toprivate) {
+                                    const key = getSharedKey(toprivate, frompublic);
+                                    const hmac = crypto.sha256hmac(key, encrypted);
+                                    if (hmac[0] === mac[0] && hmac[1] === mac[1]) {
+                                        secretkey = key;
+                                        break;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -277,7 +285,7 @@ function decodePacket(pkt)
                     msg.want_ack = true;
                     msg.namekey = nodedb.namekey(msg.from);
                     msg.data.text_message = rtrim(substr(plain, offset), "\u0000");
-                    msg.data.message_hash = crypto.sha256hash(substr(plain, 0, offset) + msg.data.text_message + fnode.nodeinfo.mc_public_key);
+                    msg.data.checksum = crypto.sha256hash(substr(plain, 0, offset) + msg.data.text_message + fnode.nodeinfo.mc_public_key);
                     return msg;
                 }
             }
@@ -304,6 +312,7 @@ function decodePacket(pkt)
             switch (type & 0x0f) {
                 case ADV_TYPE_CHAT:
                     advert.role = node.ROLE_COMPANION;
+                    advert.is_unmessagable = false;
                     break;
                 case ADV_TYPE_REPEATER:
                     advert.role = node.ROLE_REPEATER;
@@ -365,6 +374,12 @@ function decodePacket(pkt)
             break;
         }
         case PAYLOAD_TYPE_ACK:
+        {
+            msg.data.message_ack = {
+                checksum: struct.unpack("4B", pkt, offset)
+            };
+            return msg;
+        }
         case PAYLOAD_TYPE_GRP_DATA:
         case PAYLOAD_TYPE_ANON_REQ:
         case PAYLOAD_TYPE_TRACE:
@@ -431,7 +446,35 @@ function makeMeshcoreMsg(msg)
     }
     else if (msg.data?.text_message) {
         if (sendDirect(msg)) {
-            return null;
+            const topublic = nodedb.getNode(msg.to)?.nodeinfo?.public_key;
+            const fromprivate = node.fromMe(msg) ? node.getInfo().private_key : platform.getTargetById(msg.from)?.private_key;
+            const frompublic = node.fromMe(msg) ? node.getInfo().mc_public_key : nodedb.getNode(msg.from)?.nodeinfo?.mc_public_key;
+            if (topublic && fromprivate && frompublic) {
+                const tohash = ord(topublic);
+                const fromhash = ord(frompublic);
+                let sharedkey = getSharedKey(fromprivate, topublic);
+                const recents = getRecentKeys(fromhash, tohash);
+                if (recents) {
+                    let found = false;
+                    for (let i = 0; i < length(recents); i++) {
+                        if (recents[i].key === sharedkey) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        addRecentKey(msg.from, msg.to, sharedkey);
+                    }
+                }
+                const text = msg.data.text_message;
+                let plain = struct.pack("<IB", msg.rx_time, 0) + substr(text, 0, MAX_TEXT_MESSAGE_LENGTH);
+                while (length(plain) % 32 != 0) {
+                    plain += "\u0000";
+                }
+                const encrypted = crypto.encryptECB(slice(sharedkey, 0, 16), plain);
+                const hmac = crypto.sha256hmac(sharedkey, encrypted);
+                pkt = chr((PAYLOAD_VER_1 << 6) | (PAYLOAD_TYPE_TXT_MSG << 2) | ROUTE_TYPE_FLOOD) + path + struct.pack("BBBB", tohash, fromhash, ...hmac) + encrypted;
+            }
         }
         else {
             const chan = channel.getChannelByNameKey(msg.namekey);
@@ -457,8 +500,8 @@ function makeMeshcoreMsg(msg)
         }
     }
     else if (msg.data?.routing) {
-        if (msg.data.routing.error_reason === 0 && msg.data.routing.message_hash) {
-            pkt = chr((PAYLOAD_VER_1 << 6) | (PAYLOAD_TYPE_ACK << 2) | ROUTE_TYPE_FLOOD) + path + struct.pack("4B", ...msg.data.routing.message_hash);
+        if (msg.data.routing.error_reason === 0 && msg.data.routing.checksum) {
+            pkt = chr((PAYLOAD_VER_1 << 6) | (PAYLOAD_TYPE_ACK << 2) | ROUTE_TYPE_FLOOD) + path + struct.pack("4B", ...msg.data.routing.checksum);
         }
     }
 
