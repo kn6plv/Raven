@@ -201,7 +201,7 @@ export function generateKeys()
 
 export function getSharedKey(myprivatekey, theirpublickey)
 {
-    return struct.pack("<16H", ...x25519.curve25519(struct.unpack("<16H", myprivatekey), struct.unpack("<16H", (theirpublickey))));
+    return struct.pack("<16H", ...x25519.curve25519(struct.unpack("<16H", myprivatekey), struct.unpack("<16H", theirpublickey)));
 };
 
 export function sign(privatekey, publickey, plain)
@@ -216,12 +216,12 @@ export function verify(publickey, plain, signature)
 
 export function ed25519_privkey_to_x25519(key)
 {
-    return x25519.ed25519_privkey_to_x25519(key);
+    return struct.pack("<16H", ...x25519.ed25519_privkey_to_x25519(key));
 };
 
 export function ed25519_pubkey_to_x25519(key)
 {
-    return x25519.ed25519_pubkey_to_x25519(key);
+    return struct.pack("<16H", ...x25519.ed25519_pubkey_to_x25519(struct.unpack("<16H",key)));
 };
 
 export function sha256hash(data)

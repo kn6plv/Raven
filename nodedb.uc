@@ -5,6 +5,8 @@ import * as node from "node";
 const SAVE_INTERVAL = 17 * 60; // 17 minutes
 const KEEP_WINDOW = 7 * 24 * 60 * 60; // 7 days
 
+const HW_NATIVE = 254;
+
 let nodedb;
 
 export function setup(config)
@@ -62,7 +64,7 @@ export function getNodeByLongname(longname)
 export function getNodeByPublickey(public_key, create)
 {
     for (let k in nodedb) {
-        if (nodedb[k].nodeinfo?.public_key === public_key) {
+        if (nodedb[k].nodeinfo?.mc_public_key === public_key) {
             return nodedb[k];
         }
     }
@@ -70,6 +72,21 @@ export function getNodeByPublickey(public_key, create)
         return null;
     }
     return createNode(struct.unpack(">I", public_key)[0]);
+};
+
+export function getNodesByPublickeyHash(publicKeyHash, wantNative)
+{
+    const nodes = [];
+    for (let k in nodedb) {
+        const node = nodedb[k];
+        if (node.nodeinfo?.mc_public_key !== null && ord(node.nodeinfo.mc_public_key) === publicKeyHash) {
+            const isNative = node.nodeinfo.hw_model === HW_NATIVE;
+            if ((wantNative && isNative) || (!wantNative && !isNative)) {
+                push(nodes, node);
+            }
+        }
+    }
+    return nodes;
 };
 
 export function updateNode(node)

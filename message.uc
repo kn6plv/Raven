@@ -58,7 +58,7 @@ export function createMessage(to, from, namekey, type, payload, extra)
 
 export function createAckMessage(msg, reason)
 {
-    return createMessage(msg.from, null, msg.namekey, "routing", { error_reason: reason ?? 0 }, {
+    return createMessage(msg.from, null, msg.namekey, "routing", { error_reason: reason ?? 0, message_hash: msg.data?.message_hash }, {
         priority: ACK_PRIORITY,
         data: {
             request_id: msg.id

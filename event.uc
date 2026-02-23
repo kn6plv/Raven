@@ -9,7 +9,7 @@ import * as textstore from "textstore";
 import * as router from "router";
 import * as winlink from "winlink";
 
-const HW_AREDN = 254;
+const HW_NATIVE = 254;
 const HW_MESHCORE = 253;
 const q = [];
 let merge = {};
@@ -62,7 +62,7 @@ function basicNode(node)
             long_name: nodeinfo.long_name,
             role: nodeinfo.role ?? 0,
             lastseen: node.lastseen,
-            hw: nodeinfo.hw_model === HW_AREDN ? "aredn" : nodeinfo.hw_model == HW_MESHCORE ? "meshcore" : "meshtastic",
+            hw: nodeinfo.hw_model === HW_NATIVE ? "aredn" : nodeinfo.hw_model == HW_MESHCORE ? "meshcore" : "meshtastic",
             is_unmessagable: nodeinfo.is_unmessagable
         };
         if (node.favorite) {
@@ -86,7 +86,7 @@ function fullNode(node)
             role: nodeinfo.role ?? 0,
             lastseen: node.lastseen,
             hops: node.hops,
-            hw: nodeinfo.hw_model === HW_AREDN ? "aredn" : nodeinfo.hw_model === HW_MESHCORE ? "meshcore" : "meshtastic",
+            hw: nodeinfo.hw_model === HW_NATIVE ? "aredn" : nodeinfo.hw_model === HW_MESHCORE ? "meshcore" : "meshtastic",
             is_unmessagable: nodeinfo.is_unmessagable,
             public_key: nodeinfo.hw_model == HW_MESHCORE ? hexenc(nodeinfo.mc_public_key) : b64enc(nodeinfo.public_key),
             state: textmessage.state(nodedb.namekey(node.id))

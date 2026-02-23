@@ -47,8 +47,50 @@ const ADV_FEAT1_MASK = 0x20;
 const ADV_FEAT2_MASK = 0x40;
 const ADV_NAME_MASK = 0x80;
 
+const TEXT_TYPE_PLAIN = 0x00;
+const TEXT_TYPE_CLI = 0x01;
+const TEXT_TYPE_SIGNED = 0x02;
+
 let s = null;
 let bridge = ADDRESS;
+
+const sharedKeys = {};
+const xPriv = {};
+const xPub = {};
+const recentKeys = {};
+
+function getSharedKey(priv, pub)
+{
+    const hkey = `${priv}${pub}`;
+    let sharedkey = sharedKeys[hkey];
+    if (!sharedkey) {
+        let xpriv = xPriv[priv];
+        if (!xpriv) {
+            xpriv = crypto.ed25519_privkey_to_x25519(priv);
+            xPriv[priv] = xpriv;
+        }
+        let xpub = xPub[pub];
+        if (!xpub) {
+            xpub = crypto.ed25519_pubkey_to_x25519(pub);
+            xPub[pub] = xpub;
+        }
+        sharedkey = struct.unpack("32B", crypto.getSharedKey(xpriv, xpub));
+        sharedKeys[hkey] = sharedkey;
+    }
+    return sharedkey;
+}
+
+function getRecentKeys(fromhash, tohash)
+{
+    return recentKeys[`${fromhash}:${tohash}`]
+}
+
+function addRecentKey(from, to, sharedkey)
+{
+    const hkey = `${ord(from.nodeinfo.mc_public_key)}:${ord(to.nodeinfo.mc_public_key)}`;
+    const list = recentKeys[hkey] ?? (recentKeys[hkey] = []);
+    push(list, { from: from, to: to, key: sharedkey });
+}
 
 export function setup(config)
 {
@@ -154,11 +196,93 @@ function decodePacket(pkt)
     msg.id = (msg.pkthash[0] << 24) | (msg.pkthash[1] << 16) + (msg.pkthash[2] << 8) + msg.pkthash[3];
 
     switch (type) {
+        case PAYLOAD_TYPE_PATH:
         case PAYLOAD_TYPE_REQ:
         case PAYLOAD_TYPE_RESPONSE:
         case PAYLOAD_TYPE_TXT_MSG:
-        case PAYLOAD_TYPE_ACK:
-            break;
+        {
+            const tohash = ord(pkt, offset);
+            const fromhash = ord(pkt, offset + 1);
+            const mac = struct.unpack("2B", pkt, offset + 2);
+            const encrypted = substr(pkt, offset + 4);
+
+            let secretkey = null;
+            let fnode = null;
+            let tnode = null;
+
+            const recents = getRecentKeys(fromhash, tohash);
+            if (recents) {
+                for (let i = 0; i < length(recents); i++) {
+                    const recent = recents[i];
+                    const hmac = crypto.sha256hmac(recent.key, encrypted);
+                    if (hmac[0] === mac[0] && hmac[1] === mac[1]) {
+                        secretkey = recent.key;
+                        fnode = recent.from;
+                        tnode = recent.to;
+                        break;
+                    }
+                }
+            }
+            if (!secretkey) {
+                const fromnodes = nodedb.getNodesByPublickeyHash(fromhash, false);
+                const tonodes = nodedb.getNodesByPublickeyHash(tohash, true);
+                if (ord(node.getInfo().mc_public_key) === tohash) {
+                    push(tonodes, {
+                        me: true,
+                        id: node.id(),
+                        nodeinfo: node.getInfo()
+                    });
+                }
+                for (let i = 0; i < length(fromnodes) && !secretkey; i++) {
+                    fnode = fromnodes[i];
+                    const fpublic = fnode.nodeinfo.mc_public_key;
+                    for (let j = 0; j < length(tonodes); j++) {
+                        tnode = tonodes[j];
+                        const tprivate = tnode.me ? tnode.nodeinfo.private_key : platform.getTargetById(tnode.id)?.private_key;
+                        if (!tprivate) {
+                            return null;
+                        }
+                        const key = getSharedKey(tprivate, fpublic);
+                        const hmac = crypto.sha256hmac(key, encrypted);
+                        if (hmac[0] === mac[0] && hmac[1] === mac[1]) {
+                            secretkey = key;
+                            break;
+                        }
+                    }
+                }
+                if (secretkey) {
+                    addRecentKey(fnode, tnode, secretkey);
+                }
+            }
+            if (secretkey) {
+                msg.to = tnode.id;
+                msg.from = fnode.id;
+                const plain = crypto.decryptECB(slice(secretkey, 0, 16), encrypted);
+                if (type === PAYLOAD_TYPE_TXT_MSG) {
+                    const timestampAndFlags = struct.unpack("<IB", plain);
+                    msg.rx_time = timestampAndFlags[0];
+                    msg.attempt = timestampAndFlags[1] & 3;
+                    let offset = 5;
+                    switch (timestampAndFlags[1] & 3) {
+                        case TEXT_TYPE_PLAIN:
+                            break;
+                        case TEXT_TYPE_SIGNED:
+                            // Skip senders public key prefix
+                            offset += 4;
+                            break;
+                        case TEXT_TYPE_CLI:
+                        default:
+                            return null;
+                    }
+                    msg.want_ack = true;
+                    msg.namekey = nodedb.namekey(msg.from);
+                    msg.data.text_message = rtrim(substr(plain, offset), "\u0000");
+                    msg.data.message_hash = crypto.sha256hash(substr(plain, 0, offset) + msg.data.text_message + fnode.nodeinfo.mc_public_key);
+                    return msg;
+                }
+            }
+            return null;
+        }
         case PAYLOAD_TYPE_ADVERT:
         {
             const advert = {};
@@ -240,9 +364,9 @@ function decodePacket(pkt)
             }
             break;
         }
+        case PAYLOAD_TYPE_ACK:
         case PAYLOAD_TYPE_GRP_DATA:
         case PAYLOAD_TYPE_ANON_REQ:
-        case PAYLOAD_TYPE_PATH:
         case PAYLOAD_TYPE_TRACE:
         case PAYLOAD_TYPE_MULTIPART:
         case PAYLOAD_TYPE_CONTROL:
@@ -330,6 +454,11 @@ function makeMeshcoreMsg(msg)
                 pkt = chr((PAYLOAD_VER_1 << 6) | (PAYLOAD_TYPE_GRP_TXT << 2) | ROUTE_TYPE_FLOOD) + path +
                     struct.pack("3B", chan.meshcorehash, hmac[0], hmac[1]) + encrypted;
             }
+        }
+    }
+    else if (msg.data?.routing) {
+        if (msg.data.routing.error_reason === 0 && msg.data.routing.message_hash) {
+            pkt = chr((PAYLOAD_VER_1 << 6) | (PAYLOAD_TYPE_ACK << 2) | ROUTE_TYPE_FLOOD) + path + struct.pack("4B", ...msg.data.routing.message_hash);
         }
     }
 

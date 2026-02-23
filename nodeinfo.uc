@@ -8,9 +8,10 @@ import * as channel from "channel";
 import * as textmessage from "textmessage";
 import * as crypto from "crypto.crypto";
 
-const PRIVATE_HW = 255;
-const RAVEN_HW = 254;
-const MESHCORE_HW = 253;
+const HW_PRIVATE = 255;
+const HW_NATIVE = 254;
+const HW_MESHCORE = 253;
+
 const DEFAULT_INTERVAL = 3 * 60 * 60;
  
 meshtastic.registerProto(
@@ -41,7 +42,7 @@ function createNodeinfoMessage(to, namekey, extra)
         long_name: me.long_name,
         short_name: me.short_name,
         macaddr: me.macaddr,
-        hw_model: RAVEN_HW,
+        hw_model: HW_NATIVE,
         role: me.role,
         public_key: me.public_key,
         is_unmessagable: !textmessage.isMessagable()
