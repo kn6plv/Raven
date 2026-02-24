@@ -33,7 +33,7 @@ export function shutdown()
 
 export function getNode(id, create)
 {
-    if (id === node.id()) {
+    if (id == node.id()) {
         return {
             me: true,
             id: id,
@@ -45,8 +45,8 @@ export function getNode(id, create)
 
 function saveNode(n)
 {
-    if (n.id !== node.id()) {
-        nodedb[n.id] = node;
+    if (!n.me) {
+        nodedb[n.id] = n;
         n.lastseen = time();
         event.notify({ cmd: "node", id: n.id }, `node ${n.id}`);
     }
@@ -87,81 +87,83 @@ export function getNodesByPublickeyHash(publicKeyHash, wantNative)
 {
     const nodes = [];
     for (let k in nodedb) {
-        const node = nodedb[k];
-        if (node.nodeinfo?.mc_public_key !== null && ord(node.nodeinfo.mc_public_key) === publicKeyHash) {
-            const isNative = node.nodeinfo.hw_model === HW_NATIVE;
+        const n = nodedb[k];
+        if (n.nodeinfo?.mc_public_key !== null && ord(n.nodeinfo.mc_public_key) === publicKeyHash) {
+            const isNative = n.nodeinfo.hw_model === HW_NATIVE;
             if ((wantNative && isNative) || (!wantNative && !isNative)) {
-                push(nodes, node);
+                push(nodes, n);
             }
         }
     }
     return nodes;
 };
 
-export function updateNode(node)
+export function updateNode(n)
 {
-    saveNode(node);
+    saveNode(n);
 };
 
 export function updateNodeinfo(id, nodeinfo)
 {
-    const node = getNode(id);
-    if (!node.nodeinfo) {
-        node.nodeinfo = nodeinfo;
-    }
-    else {
-        const cnodeinfo = node.nodeinfo;
-        for (let k in nodeinfo) {
-            cnodeinfo[k] = nodeinfo[k];
+    const n = getNode(id);
+    if (!n.me) {
+        if (!n.nodeinfo) {
+            n.nodeinfo = nodeinfo;
         }
+        else {
+            const cnodeinfo = n.nodeinfo;
+            for (let k in nodeinfo) {
+                cnodeinfo[k] = nodeinfo[k];
+            }
+        }
+        saveNode(n);
     }
-    saveNode(node);
 };
 
 export function updatePosition(id, position)
 {
-    const node = getNode(id);
-    if (!node.position) {
-        node.position = position;
+    const n = getNode(id);
+    if (!n.position) {
+        n.position = position;
     }
     else {
-        const cposition = node.position;
+        const cposition = n.position;
         for (let k in position) {
             cposition[k] = position[k];
         }
     }
-    saveNode(node);
+    saveNode(n);
 };
 
 export function updateDeviceMetrics(id, metrics)
 {
-    const node = getNode(id);
-    const telemetry = node.telemetry ?? (node.telemetry = {});
+    const n = getNode(id);
+    const telemetry = n.telemetry ?? (n.telemetry = {});
     telemetry.device_metrics = metrics;  
-    saveNode(node);
+    saveNode(n);
 };
 
 export function updateEnvironmentMetrics(id, metrics)
 {
-    const node = getNode(id);
-    const telemetry = node.telemetry ?? (node.telemetry = {});
+    const n = getNode(id);
+    const telemetry = n.telemetry ?? (n.telemetry = {});
     telemetry.environment_metrics = metrics;  
-    saveNode(node);
+    saveNode(n);
 };
 
 export function updateAirQualityMetrics(id, metrics)
 {
-    const node = getNode(id);
-    const telemetry = node.telemetry ?? (node.telemetry = {});
+    const n = getNode(id);
+    const telemetry = n.telemetry ?? (n.telemetry = {});
     telemetry.airquality_metrics = metrics;  
-    saveNode(node);
+    saveNode(n);
 };
 
 export function updatePath(id, path)
 {
-    const node = getNode(id);
-    node.path = path;
-    saveNode(node);
+    const n = getNode(id);
+    n.path = path;
+    saveNode(n);
 };
 
 export function getNodes(favorite)
@@ -185,9 +187,9 @@ export function tick()
 
 export function process(msg)
 {
-    const node = getNode(msg.from, false);
-    if (node && msg.hop_start && msg.hop_limit) {
-        node.hops = msg.hop_start - msg.hop_limit;
-        saveNode(node);
+    const n = getNode(msg.from, false);
+    if (n && msg.hop_start && msg.hop_limit) {
+        n.hops = msg.hop_start - msg.hop_limit;
+        saveNode(n);
     }
 };
