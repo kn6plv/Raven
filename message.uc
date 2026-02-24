@@ -42,12 +42,6 @@ export function createMessage(to, from, namekey, type, payload, extra)
             [type]: payload
         }
     };
-    if (to && to !== node.BROADCAST) {
-        const node = nodedb.getNode(to, false);
-        if (node?.path) {
-            msg.path = node.path;
-        }
-    }
     if (extra) {
         for (let k in extra) {
             if (k === "data") {
