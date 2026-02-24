@@ -43,11 +43,13 @@ export function getNode(id, create)
     return nodedb[id] ?? (create === false ? null : { id: id });
 };
 
-function saveNode(node)
+function saveNode(n)
 {
-    nodedb[node.id] = node;
-    node.lastseen = time();
-    event.notify({ cmd: "node", id: node.id }, `node ${node.id}`);
+    if (n.id !== node.id()) {
+        nodedb[n.id] = node;
+        n.lastseen = time();
+        event.notify({ cmd: "node", id: n.id }, `node ${n.id}`);
+    }
 }
 
 export function createNode(id)
