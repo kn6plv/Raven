@@ -56,6 +56,7 @@ function createAdvertMessage()
     return message.createMessage(null, null, null, "advert", {
         role: me.role,
         name: me.long_name,
+        hw_model: HW_NATIVE,
         public_key: me.mc_public_key,
         position: {
             latitude_i: int(loc.lat * 10000000),

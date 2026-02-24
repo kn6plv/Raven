@@ -13,8 +13,9 @@ const ADDRESS = "224.0.0.69";
 const PORT = 4402;
 
 const SAVE_INTERVAL = 19 * 60; // 19 minutes
+const ACK_INTERVAL = 60; // 1 minute
 
-const HW_MESCORE = 253;
+const HW_MESHCORE = 253;
 
 const MAX_TEXT_MESSAGE_LENGTH = 155;
 
@@ -61,6 +62,7 @@ let sharedKeys = {};
 let xPriv = {};
 let xPub = {};
 const recentKeys = {};
+const pendingAcks = {};
 
 function getSharedKey(priv, pub)
 {
@@ -107,14 +109,36 @@ function getRecentKeys(fromhash, tohash)
     return recentKeys[`${fromhash}:${tohash}`]
 }
 
-function addRecentKey(from, to, sharedkey)
+function addRecentKey(fromhash, tohash, from, to, sharedkey)
 {
-    const fromhash = ord(from.nodeinfo.mc_public_key);
-    const tohash = ord(to.nodeinfo.mc_public_key);
     const hkey = `${fromhash}:${tohash}`;
     const rkey = `${tohash}:${fromhash}`;
     push(recentKeys[hkey] ?? (recentKeys[hkey] = []), { from: from, to: to, key: sharedkey });
     push(recentKeys[rkey] ?? (recentKeys[rkey] = []), { from: to, to: from, key: sharedkey });
+}
+
+function addToAckQ(to, from, id, checksum)
+{
+    pendingAcks[struct.pack("4B", ...checksum)] = { to: to, from: from, id: id, checksum: checksum, when: time(), retry: 0 };
+}
+
+function ackAck(checksum)
+{
+    const ack = pendingAcks[checksum];
+    if (ack) {
+        delete pendingAcks[checksum];
+    }
+    return ack;
+}
+
+function processAcks()
+{
+    const when = time() - ACK_INTERVAL;
+    for (let k in pendingAcks) {
+        if (pendingAcks[k].when < when) {
+            delete pendingAcks[k];
+        }
+    }
 }
 
 export function setup(config)
@@ -149,7 +173,8 @@ export function setup(config)
 
     loadSharedKeys();
 
-    timers.setInterval("meshcore", SAVE_INTERVAL);
+    timers.setInterval("meshcore.save", SAVE_INTERVAL);
+    timers.setInterval("meshcore.acks", ACK_INTERVAL);
 };
 
 export function shutdown()
@@ -184,6 +209,8 @@ function decodePacket(pkt)
     //print("decode ", pkt, "\n");
     let offset = 0;
     const msg = {
+        from: node.UNKNOWN,
+        to: node.UNKNOWN,
         // Set the hop_limit to 1 to prevent this from being routed back out to meshcore or meshtastic
         hop_limit: 1,
         data: {},
@@ -226,6 +253,13 @@ function decodePacket(pkt)
     msg.path = substr(pkt, offset + 1, pathlen);
     offset += pathlen + 1;
 
+    // If direct, if there's no path, or I'm not the current point on it, discard.
+    if (msg.route_type === "direct" || msg.route_type === "transport_direct") {
+        if (pathlen === 0 || ord(msg.path) !== node.getMeshcoreHash()) {
+            return null;
+        }
+    }
+
     msg.pkthash = crypto.sha256hash(chr(type) + (type === PAYLOAD_TYPE_TRACE ? msg.path : "") + substr(pkt, offset));
     msg.id = (msg.pkthash[0] << 24) | (msg.pkthash[1] << 16) + (msg.pkthash[2] << 8) + msg.pkthash[3];
 
@@ -233,7 +267,6 @@ function decodePacket(pkt)
         case PAYLOAD_TYPE_PATH:
         case PAYLOAD_TYPE_REQ:
         case PAYLOAD_TYPE_RESPONSE:
-            break;
         case PAYLOAD_TYPE_TXT_MSG:
         {
             const tohash = ord(pkt, offset);
@@ -262,7 +295,7 @@ function decodePacket(pkt)
             if (!secretkey) {
                 const fromnodes = nodedb.getNodesByPublickeyHash(fromhash, false);
                 const tonodes = nodedb.getNodesByPublickeyHash(tohash, true);
-                if (!me.is_unmessagable && ord(me.mc_public_key) === tohash) {
+                if (!me.is_unmessagable && node.getMeshcoreHash() === tohash) {
                     push(tonodes, {
                         me: true,
                         id: node.id(),
@@ -292,34 +325,65 @@ function decodePacket(pkt)
                     }
                 }
                 if (secretkey) {
-                    addRecentKey(fnodeid, tnodeid, secretkey);
+                    addRecentKey(fromhash, tohash, fnodeid, tnodeid, secretkey);
                 }
             }
             if (secretkey) {
                 msg.to = tnodeid;
                 msg.from = fnodeid;
-                const plain = crypto.decryptECB(slice(secretkey, 0, 16), encrypted);
-                if (type === PAYLOAD_TYPE_TXT_MSG) {
-                    const timestampAndFlags = struct.unpack("<IB", plain);
-                    msg.rx_time = timestampAndFlags[0];
-                    msg.attempt = timestampAndFlags[1] & 3;
-                    let offset = 5;
-                    switch (timestampAndFlags[1] & 3) {
-                        case TEXT_TYPE_PLAIN:
-                            break;
-                        case TEXT_TYPE_SIGNED:
-                            // Skip senders public key prefix
-                            offset += 4;
-                            break;
-                        case TEXT_TYPE_CLI:
-                        default:
-                            return null;
+                const plain = crypto.decryptECB(secretkey, encrypted);
+                switch (type) {
+                    case PAYLOAD_TYPE_TXT_MSG:
+                    {
+                        const timestampAndFlags = struct.unpack("<IB", plain);
+                        msg.rx_time = timestampAndFlags[0];
+                        msg.attempt = timestampAndFlags[1] & 3;
+                        let offset = 5;
+                        switch (timestampAndFlags[1] & 3) {
+                            case TEXT_TYPE_PLAIN:
+                                break;
+                            case TEXT_TYPE_SIGNED:
+                                // Skip senders public key prefix verification
+                                offset += 4;
+                                break;
+                            case TEXT_TYPE_CLI:
+                            default:
+                                return null;
+                        }
+                        msg.want_ack = true;
+                        msg.namekey = nodedb.namekey(fnodeid);
+                        msg.data.text_message = rtrim(substr(plain, offset), "\u0000");
+                        msg.data.checksum = slice(crypto.sha256hash(substr(plain, 0, offset) + msg.data.text_message + nodedb.getNode(fnodeid).nodeinfo.mc_public_key), 0, 4);
+                        return msg;
                     }
-                    msg.want_ack = true;
-                    msg.namekey = nodedb.namekey(fnodeid);
-                    msg.data.text_message = rtrim(substr(plain, offset), "\u0000");
-                    msg.data.checksum = crypto.sha256hash(substr(plain, 0, offset) + msg.data.text_message + nodedb.getNode(fnodeid).nodeinfo.mc_public_key);
-                    return msg;
+                    case PAYLOAD_TYPE_PATH:
+                    {
+                        let offset = 1;
+                        const pathlen = ord(plain);
+                        const path = slice(plain, offset, offset + pathlen);
+                        offset += pathlen;
+                        if (offset < length(plain)) {
+                            switch (ord(plain, offset)) {
+                                case PAYLOAD_TYPE_ACK:
+                                {
+                                    const ack = ackAck(substr(plain, offset + 1, offset + 5));
+                                    if (ack) {
+                                        msg.to = ack.from;
+                                        msg.from = ack.to;
+                                        msg.data.routing = { error_reason: 0, checksum: ack.checksum, path: path };
+                                        msg.data.request_id = ack.id;
+                                        return msg;
+                                    }
+                                    break;
+                                }
+                                default:
+                                    break;
+                            }
+                        }
+                        break;
+                    }
+                    default:
+                        break;
                 }
             }
             return null;
@@ -328,7 +392,7 @@ function decodePacket(pkt)
         {
             const advert = {};
             msg.data.advert = advert;
-            advert.hw_model = HW_MESCORE;
+            advert.hw_model = HW_MESHCORE;
             advert.is_unmessagable = true;
             advert.public_key = substr(pkt, offset, 32);
             advert.timestamp = struct.unpack("<I", pkt, offset + 32)[0];
@@ -408,10 +472,15 @@ function decodePacket(pkt)
         }
         case PAYLOAD_TYPE_ACK:
         {
-            msg.data.message_ack = {
-                checksum: struct.unpack("4B", pkt, offset)
-            };
-            return msg;
+            const ack = ackAck(substr(pkt, offset, offset + 4));
+            if (ack) {
+                msg.to = ack.from;
+                msg.from = ack.to;
+                msg.data.routing = { error_reason: 0, checksum: ack.checksum };
+                msg.data.request_id = ack.id;
+                return msg;
+            }
+            break;
         }
         case PAYLOAD_TYPE_GRP_DATA:
         case PAYLOAD_TYPE_ANON_REQ:
@@ -437,7 +506,7 @@ function makeNativeMsg(data)
         return decodePacket(substr(data, 4, length(data) - 6));
     }
     catch (e) {
-        DEBUG0("meshcore:makeNativeMsg error: %s\n", e.stacktrace);
+        DEBUG0("meshcore:makeNativeMsg error: %s\n%s\n", e, e.stacktrace);
         return null;
     }
 }
@@ -445,7 +514,12 @@ function makeNativeMsg(data)
 function makeMeshcoreMsg(msg)
 {
     let pkt = null;
-    const path = chr(1) + substr(node.getInfo().mc_public_key, 0, 1);
+
+    let path = "";
+    if (!node.fromMe(msg)) {
+        path = substr(nodedb.getNode(msg.from, false)?.nodeinfo?.mc_public_key, 0, 1) ?? "";
+    }
+    path = chr(length(path) + 1) + path + chr(node.getMeshcoreHash());
 
     if (msg.data?.advert) {
         const advert = msg.data.advert;
@@ -479,7 +553,7 @@ function makeMeshcoreMsg(msg)
     }
     else if (msg.data?.text_message) {
         if (sendDirect(msg)) {
-            const topublic = nodedb.getNode(msg.to)?.nodeinfo?.public_key;
+            const topublic = nodedb.getNode(msg.to)?.nodeinfo?.mc_public_key;
             const fromprivate = node.fromMe(msg) ? node.getInfo().private_key : platform.getTargetById(msg.from)?.private_key;
             const frompublic = node.fromMe(msg) ? node.getInfo().mc_public_key : nodedb.getNode(msg.from)?.nodeinfo?.mc_public_key;
             if (topublic && fromprivate && frompublic) {
@@ -496,17 +570,21 @@ function makeMeshcoreMsg(msg)
                         }
                     }
                     if (!found) {
-                        addRecentKey(msg.from, msg.to, sharedkey);
+                        addRecentKey(fromhash, tohash, msg.from, msg.to, sharedkey);
                     }
                 }
-                const text = msg.data.text_message;
-                let plain = struct.pack("<IB", msg.rx_time, 0) + substr(text, 0, MAX_TEXT_MESSAGE_LENGTH);
+                let plain = struct.pack("<IB", msg.rx_time, 0) + substr(msg.data.text_message, 0, MAX_TEXT_MESSAGE_LENGTH);
+                addToAckQ(msg.to, msg.from, msg.id, slice(crypto.sha256hash(plain + frompublic), 0, 4));
+
                 while (length(plain) % 32 != 0) {
                     plain += "\u0000";
                 }
-                const encrypted = crypto.encryptECB(slice(sharedkey, 0, 16), plain);
+                const encrypted = crypto.encryptECB(sharedkey, plain);
                 const hmac = crypto.sha256hmac(sharedkey, encrypted);
-                pkt = chr((PAYLOAD_VER_1 << 6) | (PAYLOAD_TYPE_TXT_MSG << 2) | ROUTE_TYPE_FLOOD) + path + struct.pack("BBBB", tohash, fromhash, ...hmac) + encrypted;
+
+
+                pkt = chr((PAYLOAD_VER_1 << 6) | (PAYLOAD_TYPE_TXT_MSG << 2) | ROUTE_TYPE_FLOOD) + path +
+                    struct.pack("4B", tohash, fromhash, hmac[0], hmac[1]) + encrypted;
             }
         }
         else {
@@ -569,8 +647,11 @@ export function send(msg)
 
 export function tick()
 {
-    if (timers.tick("meshcore")) {
+    if (timers.tick("meshcore.save")) {
         saveSharedKeys();
+    }
+    if (timers.tick("meshcore.acks")) {
+        processAcks();
     }
 };
 

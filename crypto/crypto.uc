@@ -11,7 +11,7 @@ export function decryptECB(key, encrypted)
 
     aes.AES_Init();
 
-    const ekey = aes.AES_ExpandKey(slice(key));
+    const ekey = aes.AES_ExpandKey(slice(key, 0, 16));
 
     for (let i = 0; i < length(encrypted); i += 16) {
         plain += struct.pack("16B", ...aes.AES_Decrypt(struct.unpack("16B", encrypted, i), ekey));
@@ -28,7 +28,7 @@ export function encryptECB(key, plain)
 
     aes.AES_Init();
 
-    const ekey = aes.AES_ExpandKey(slice(key));
+    const ekey = aes.AES_ExpandKey(slice(key, 0, 16));
 
     for (let i = 0; i < length(plain); i += 16) {
         encrypted += struct.pack("16B", ...aes.AES_Encrypt(struct.unpack("16B", plain, i), ekey));
