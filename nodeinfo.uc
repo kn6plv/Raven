@@ -3,10 +3,8 @@ import * as message from "message";
 import * as node from "node";
 import * as nodedb from "nodedb";
 import * as timers from "timers";
-import * as meshtastic from "meshtastic";
 import * as channel from "channel";
 import * as textmessage from "textmessage";
-import * as crypto from "crypto.crypto";
 
 const HW_PRIVATE = 255;
 const HW_NATIVE = 254;
@@ -14,21 +12,6 @@ const HW_MESHCORE = 253;
 
 const DEFAULT_INTERVAL = 3 * 60 * 60;
  
-meshtastic.registerProto(
-    "nodeinfo", 4,
-    {
-        "1": "string id",
-        "2": "string long_name",
-        "3": "string short_name",
-        "4": "bytes macaddr",
-        "5": "enum hw_model",
-        "6": "bool is_licensed",
-        "7": "enum role",
-        "8": "bytes public_key",
-        "9": "bool is_unmessagable"
-    }
-);
-
 export function setup(config)
 {
     timers.setInterval("nodeinfo", 60, config.nodeinfo?.interval ?? DEFAULT_INTERVAL);

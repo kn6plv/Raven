@@ -4,38 +4,8 @@ import * as router from "router";
 import * as nodedb from "nodedb";
 import * as node from "node";
 import * as channel from "channel";
-import * as meshtastic from "meshtastic";
 
 const DEFAULT_INTERVAL = 60 * 60;
-
-meshtastic.registerProto(
-    "position", 3,
-    {
-        "1": "sfixed32 latitude_i",
-        "2": "sfixed32 longitude_i",
-        "3": "int32 altitude",
-        "4": "fixed32 time",
-        "5": "enum location_source",
-        "6": "enum altitude_source",
-        "7": "fixed32 timestamp",
-        "8": "int32 timestamp_millis_adjust",
-        "9": "sint32 altitude_hae",
-        "10": "sint32 altitude_geoidal_separation",
-        "11": "uint32 PDOP",
-        "12": "uint32 HDOP",
-        "13": "uint32 VDOP",
-        "14": "uint32 gps_accuracy",
-        "15": "uint32 ground_speed",
-        "16": "uint32 ground_track",
-        "17": "uint32 fix_quality",
-        "18": "uint32 fix_type",
-        "19": "uint32 sats_in_view",
-        "20": "uint32 sensor_id",
-        "21": "uint32 next_update",
-        "22": "uint32 seq_number",
-        "23": "uint32 precision_bits"
-    }
-);
 
 export function setup(config)
 {

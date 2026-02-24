@@ -1,29 +1,9 @@
 import * as math from "math";
 import * as node from "node";
 import * as channel from "channel";
-import * as nodedb from "nodedb";
-import * as meshtastic from "meshtastic";
 
 const DEFAULT_PRIORITY = 64;
 const ACK_PRIORITY = 120;
-
-meshtastic.registerProto(
-    "routediscovery", null,
-    {
-        "1": "repeated fixed32 route",
-        "2": "repeated int32 snr_towards",
-        "3": "repeated fixed32 route_back",
-        "4": "repeated int32 snr_back"
-    }
-);
-meshtastic.registerProto(
-    "routing", 5,
-    {
-        "1": "proto routediscovery route_request",
-        "2": "proto routediscovery route_reply",
-        "3": "enum error_reason"
-    }
-);
 
 export function createMessage(to, from, namekey, type, payload, extra)
 {

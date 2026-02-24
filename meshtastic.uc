@@ -65,47 +65,6 @@ export function registerProto(name, portnum, decode)
     }
 };
 
-registerProto(
-    "packet", null,
-    {
-        "1": "fixed32 from",
-        "2": "fixed32 to",
-        "3": "uint32 channel",
-        "4": "bytes decoded",
-        "5": "bytes encrypted",
-        "6": "fixed32 id",
-        "7": "fixed32 rx_time",
-        "8": "float rx_snr",
-        "9": "uint32 hop_limit",
-        "10": "bool want_ack",
-        "11": "enum priority",
-        "12": "int32 rx_rssi",
-        "13": "enum delayed",
-        "14": "bool via_mqtt",
-        "15": "uint32 hop_start",
-        "16": "bytes public_key",
-        "17": "bool pki_encrypted",
-        "18": "uint32 next_hop",
-        "19": "uint32 relay_node",
-        "20": "uint32 tx_after",
-        "21": "enum transport_mechanism"
-    }
-);
-registerProto(
-    "data", null,
-    {
-        "1": "enum portnum",
-        "2": "bytes payload",
-        "3": "bool want_response",
-        "4": "fixed32 dest",
-        "5": "fixed32 source",
-        "6": "fixed32 request_id",
-        "7": "fixed32 reply_id",
-        "8": "fixed32 emoji",
-        "9": "uint32 bitfield"
-    }
-);
-
 let sharedKeys = {};
 
 function getSharedKey(priv, pub)

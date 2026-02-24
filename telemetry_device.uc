@@ -4,22 +4,10 @@ import * as node from "node";
 import * as timers from "timers";
 import * as nodedb from "nodedb";
 import * as channel from "channel";
-import * as meshtastic from "meshtastic";
 import * as telemetry from "telemetry";
 
 const GRID_POWER = 101;
 let startTime = 0;
- 
-meshtastic.registerProto(
-    "device_metrics", null,
-    {
-        "1": "uint32 battery_level",
-        "2": "float voltage",
-        "3": "float channel_utilization",
-        "4": "float air_util_tx",
-        "5": "uint32 uptime_seconds"
-    }
-);
 
 export function setup(config)
 {

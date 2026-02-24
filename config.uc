@@ -4,6 +4,7 @@ import * as channel from "channel";
 import * as node from "node";
 import * as ipmesh from "ipmesh";
 import * as meshtastic from "meshtastic";
+import * as meshtasticprotobufs from "meshtasticprotobufs";
 import * as meshcore from "meshcore";
 import * as websocket from "websocket";
 import * as event from "event";
@@ -12,13 +13,11 @@ import * as nodedb from "nodedb";
 import * as nodeinfo from "nodeinfo";
 import * as textmessage from "textmessage";
 import * as position from "position";
-import * as neighborinfo from "neighborinfo";
 import * as traceroute from "traceroute";
 import * as textstore from "textstore";
 import * as device from "telemetry_device";
 import * as environmental_weewx from "telemetry_environmental_weewx";
 import * as airquality_purpleair from "telemetry_airquality_purpleair";
-import * as power from "telemetry_power";
 import * as winlink from "winlink";
 
 let bconfig;
@@ -177,8 +176,6 @@ export function setup()
     router.registerApp(traceroute);
     device.setup(config);
     router.registerApp(device);
-    neighborinfo.setup(config);
-    router.registerApp(neighborinfo);
     channel.setup(config);
     router.registerApp(channel);
     textstore.setup(config);
@@ -192,9 +189,6 @@ export function setup()
         airquality_purpleair.setup(config);
         router.registerApp(airquality_purpleair);
     }
-
-    power.setup(config);
-    router.registerApp(power);
 
     winlink.setup(config);
     router.registerApp(winlink);

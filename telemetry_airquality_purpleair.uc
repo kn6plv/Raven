@@ -5,7 +5,6 @@ import * as node from "node";
 import * as nodedb from "nodedb";
 import * as channel from "channel";
 import * as telemetry from "telemetry";
-import * as airquality from "telemetry_airquality";
 
 let purpleairurl;
 
