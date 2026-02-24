@@ -111,4 +111,10 @@ export function process(msg)
             }
         }));
     }
+    if (msg.path && (msg.route_type === "flood" || msg.route_type === "transport_flood")) {
+        nodedb.updatePath(msg.from, reverse(msg.path));
+    }
+    if (msg.data?.returned_path) {
+        nodedb.updatePath(msg.from, msg.data.returned_path);
+    }
 };

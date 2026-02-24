@@ -1,6 +1,7 @@
 import * as math from "math";
 import * as node from "node";
 import * as channel from "channel";
+import * as nodedb from "nodedb";
 import * as meshtastic from "meshtastic";
 
 const DEFAULT_PRIORITY = 64;
@@ -41,6 +42,12 @@ export function createMessage(to, from, namekey, type, payload, extra)
             [type]: payload
         }
     };
+    if (to && to !== node.BROADCAST) {
+        const node = nodedb.getNode(to, false);
+        if (node?.path) {
+            msg.path = node.path;
+        }
+    }
     if (extra) {
         for (let k in extra) {
             if (k === "data") {

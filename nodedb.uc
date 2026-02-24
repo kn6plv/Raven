@@ -33,6 +33,13 @@ export function shutdown()
 
 export function getNode(id, create)
 {
+    if (id === node.id()) {
+        return {
+            me: true,
+            id: id,
+            nodeinfo: node.getInfo()
+        };
+    }
     return nodedb[id] ?? (create === false ? null : { id: id });
 };
 
@@ -145,6 +152,13 @@ export function updateAirQualityMetrics(id, metrics)
     const node = getNode(id);
     const telemetry = node.telemetry ?? (node.telemetry = {});
     telemetry.airquality_metrics = metrics;  
+    saveNode(node);
+};
+
+export function updatePath(id, path)
+{
+    const node = getNode(id);
+    node.path = path;
     saveNode(node);
 };
 
