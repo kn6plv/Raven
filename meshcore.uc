@@ -57,6 +57,7 @@ const TEXT_TYPE_SIGNED = 0x02;
 
 let s = null;
 let bridge = ADDRESS;
+let bridgeHash = null;
 
 let sharedKeys = {};
 let xPriv = {};
@@ -150,6 +151,11 @@ export function setup(config)
     if (config.meshcore.bridge) {
         bridge = config.meshcore.bridge;
     }
+    bridgeHash = config.meshcore.bridgehash;
+    if (bridgeHash === null) {
+        print("Missing bridge hash - disabling direct routing\n");
+    }
+
     s = socket.create(socket.AF_INET, socket.SOCK_DGRAM, 0);
     s.bind({
         port: PORT
@@ -220,20 +226,20 @@ function decodePacket(pkt)
     offset++;
     switch (header & 0x03) {
         case ROUTE_TYPE_TRANSPORT_FLOOD:
-            msg.route_type = "transport_flood";
+            msg.flood = true;
             msg.to = node.BROADCAST;
             msg.transport_codes = struct.unpack("<HH", pkt, offset);
             offset += 4;
             break;
         case ROUTE_TYPE_FLOOD:
-            msg.route_type = "flood";
+            msg.flood = true;
             msg.to = node.BROADCAST;
             break;
         case ROUTE_TYPE_DIRECT:
-            msg.route_type = "direct";
+            msg.flood = false;
             break;
         case ROUTE_TYPE_TRANSPORT_DIRECT:
-            msg.route_type = "transport_direct";
+            msg.flood = false;
             msg.transport_codes = struct.unpack("<HH", pkt, offset);
             offset += 4;
             break;
@@ -250,19 +256,21 @@ function decodePacket(pkt)
     }
 
     const pathlen = ord(pkt, offset);
-    msg.path = substr(pkt, offset + 1, pathlen);
+    const path = substr(pkt, offset + 1, pathlen);
     offset += pathlen + 1;
 
-    // If direct, if there's no path, or I'm not the current point on it, discard.
-    if (msg.route_type === "direct" || msg.route_type === "transport_direct") {
-        if (pathlen === 0 || ord(msg.path) !== node.getMeshcoreHash()) {
+    if (msg.flood) {
+        if (bridgeHash !== null) {
+            msg.path = path + chr(bridgeHash);
+        }
+    }
+    else {
+        // pathlen == 0: We are the destination for this packet. We may not be the target because of the 8-bit hash thing.
+        // pathlen == bridge: We are the last hop on the path before the final destination is reached.
+        if (!(pathlen === 0 || (pathlen === 1 && ord(path) === bridgeHash))) {
+            // Otherwise, not for us.
             return null;
         }
-        msg.path = substr(msg.path, 1);
-    }
-    // If flooding, add ourselves to the path.
-    else {
-        msg.path += chr(node.getMeshcoreHash());
     }
 
     msg.pkthash = crypto.sha256hash(chr(type) + (type === PAYLOAD_TYPE_TRACE ? msg.path : "") + substr(pkt, offset));
@@ -365,7 +373,7 @@ function decodePacket(pkt)
                     {
                         let offset = 1;
                         const pathlen = ord(plain);
-                        const path = slice(plain, offset, offset + pathlen);
+                        const path = substr(plain, offset, pathlen);
                         offset += pathlen;
                         if (offset < length(plain)) {
                             switch (ord(plain, offset)) {
@@ -517,14 +525,13 @@ function makeNativeMsg(data)
     }
 }
 
-function makePktHeader(msg, type)
+function makePktHeader(type, path)
 {
-    if (msg.path) {
-        return chr((PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_DIRECT) + chr(length(msg.path)) + msg.path;
+    if (path && bridgeHash !== null) {
+        return chr((PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_DIRECT) + chr(length(path)) + path;
     }
-    else {
-        return chr((PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_FLOOD) + chr(0);
-    }
+    // If we dont have a path, create a flood route building a new path.
+    return chr((PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_FLOOD) + chr(0);
 }
 
 function getDirectSendKey(msg)
@@ -576,12 +583,9 @@ function makeMeshcoreMsg(msg)
     if (node.isBroadcast(msg)) {
         msg.path = null;
     }
-    else if (msg.path) {
-        if (ord(msg.path) === node.getMeshcoreHash()) {
-            msg.path = substr(msg.path, 1);
-        }
+    else {
+        msg.path = nodedb.getNode(msg.to, false)?.path;
     }
-    msg.path = null;
 
     if (msg.data?.advert) {
         const advert = msg.data.advert;
@@ -610,8 +614,7 @@ function makeMeshcoreMsg(msg)
         const fromprivate = node.fromMe(msg) ? node.getInfo().private_key : platform.getTargetById(msg.from)?.private_key;
         const signature = crypto.sign(fromprivate, advert.public_key, plain);
 
-        pkt = chr((PAYLOAD_VER_1 << 6) | (PAYLOAD_TYPE_ADVERT << 2) | ROUTE_TYPE_FLOOD) + chr(0) +
-            advert.public_key + struct.pack("<I", msg.rx_time) + signature + appdata;
+        pkt = makePktHeader(PAYLOAD_TYPE_ADVERT, null) + advert.public_key + struct.pack("<I", msg.rx_time) + signature + appdata;
     }
     else if (msg.data?.text_message) {
         if (sendDirect(msg)) {
@@ -623,7 +626,7 @@ function makeMeshcoreMsg(msg)
                 const encrypted = crypto.encryptECB(keys.sharedkey, pad(plain));
                 const hmac = crypto.sha256hmac(keys.sharedkey, encrypted);
 
-                pkt = makePktHeader(msg, PAYLOAD_TYPE_TXT_MSG) + struct.pack("4B", keys.tohash, keys.fromhash, hmac[0], hmac[1]) + encrypted;
+                pkt = makePktHeader(PAYLOAD_TYPE_TXT_MSG, msg.path) + struct.pack("4B", keys.tohash, keys.fromhash, hmac[0], hmac[1]) + encrypted;
             }
         }
         else {
@@ -641,8 +644,7 @@ function makeMeshcoreMsg(msg)
                 const encrypted = crypto.encryptECB(chan.symmetrickey, plain);
                 const hmac = crypto.sha256hmac(chan.symmetrickey, encrypted);
 
-                pkt = chr((PAYLOAD_VER_1 << 6) | (PAYLOAD_TYPE_GRP_TXT << 2) | ROUTE_TYPE_FLOOD) + chr(0) +
-                    struct.pack("3B", chan.meshcorehash, hmac[0], hmac[1]) + encrypted;
+                pkt = makePktHeader(PAYLOAD_TYPE_GRP_TXT, null) + struct.pack("3B", chan.meshcorehash, hmac[0], hmac[1]) + encrypted;
             }
         }
     }
@@ -656,11 +658,11 @@ function makeMeshcoreMsg(msg)
                     const encrypted = crypto.encryptECB(keys.sharedkey, pad(plain));
                     const hmac = crypto.sha256hmac(keys.sharedkey, encrypted);
 
-                    pkt = makePktHeader(msg, PAYLOAD_TYPE_PATH) + struct.pack("4B", keys.tohash, keys.fromhash, hmac[0], hmac[1]) + encrypted;
+                    pkt = makePktHeader(PAYLOAD_TYPE_PATH, msg.path) + struct.pack("4B", keys.tohash, keys.fromhash, hmac[0], hmac[1]) + encrypted;
                 }
             }
             if (!pkt) {
-                pkt = makePktHeader(msg, PAYLOAD_TYPE_ACK) + struct.pack("4B", ...msg.data.routing.checksum);
+                pkt = makePktHeader(PAYLOAD_TYPE_ACK, null) + struct.pack("4B", ...msg.data.routing.checksum);
             }
         }
     }
