@@ -4,12 +4,15 @@ import * as channel from "channel";
 import * as node from "node";
 import * as nodedb from "nodedb";
 import * as crypto from "crypto.crypto";
+import * as timers from "timers";
 
 // Public - 8b3387e9c5cdea6ac9e5edbaa115cd72 - izOH6cXN6mrJ5e26oRXNcg==
 // #NAME -> sha256(#NAME)[0..15]
 
 const ADDRESS = "224.0.0.69";
 const PORT = 4402;
+
+const SAVE_INTERVAL = 19 * 60; // 19 minutes
 
 const HW_MESCORE = 253;
 
@@ -54,9 +57,9 @@ const TEXT_TYPE_SIGNED = 0x02;
 let s = null;
 let bridge = ADDRESS;
 
-const sharedKeys = {};
-const xPriv = {};
-const xPub = {};
+let sharedKeys = {};
+let xPriv = {};
+let xPub = {};
 const recentKeys = {};
 
 function getSharedKey(priv, pub)
@@ -78,6 +81,25 @@ function getSharedKey(priv, pub)
         sharedKeys[hkey] = sharedkey;
     }
     return sharedkey;
+}
+
+function loadSharedKeys()
+{
+    const data = platform.load("meshcore.sharedkeys");
+    if (data) {
+        sharedKeys = data.sharedKeys;
+        xPriv = data.xPriv;
+        xPub = data.xPub;
+    }
+}
+
+function saveSharedKeys()
+{
+    platform.store("meshcore.sharedkeys", {
+        sharedKeys: sharedKeys,
+        xPriv: xPriv,
+        xPub: xPub
+    });
 }
 
 function getRecentKeys(fromhash, tohash)
@@ -124,6 +146,15 @@ export function setup(config)
     }
     s.setopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 0);
     s.listen();
+
+    loadSharedKeys();
+
+    timers.setInterval("meshcore", SAVE_INTERVAL);
+};
+
+export function shutdown()
+{
+    saveSharedKeys();
 };
 
 export function handle()
@@ -211,8 +242,8 @@ function decodePacket(pkt)
             const encrypted = substr(pkt, offset + 4);
 
             let secretkey = null;
-            let fnode = null;
-            let tnode = null;
+            let fnodeid = null;
+            let tnodeid = null;
             const me = node.getInfo();
 
             const recents = getRecentKeys(fromhash, tohash);
@@ -222,8 +253,8 @@ function decodePacket(pkt)
                     const hmac = crypto.sha256hmac(recent.key, encrypted);
                     if (hmac[0] === mac[0] && hmac[1] === mac[1]) {
                         secretkey = recent.key;
-                        fnode = recent.from;
-                        tnode = recent.to;
+                        fnodeid = recent.from;
+                        tnodeid = recent.to;
                         break;
                     }
                 }
@@ -239,11 +270,11 @@ function decodePacket(pkt)
                     });
                 }
                 for (let i = 0; i < length(fromnodes) && !secretkey; i++) {
-                    fnode = fromnodes[i];
+                    const fnode = fromnodes[i];
                     if (!fnode.nodeinfo.is_unmessagable) {
                         const frompublic = fnode.nodeinfo.mc_public_key;
                         for (let j = 0; j < length(tonodes); j++) {
-                            tnode = tonodes[j];
+                            const tnode = tonodes[j];
                             if (!tnode.nodeinfo.is_unmessagable) {
                                 const toprivate = tnode.me ? tnode.nodeinfo.private_key : platform.getTargetById(tnode.id)?.private_key;
                                 if (toprivate) {
@@ -251,6 +282,8 @@ function decodePacket(pkt)
                                     const hmac = crypto.sha256hmac(key, encrypted);
                                     if (hmac[0] === mac[0] && hmac[1] === mac[1]) {
                                         secretkey = key;
+                                        fnodeid = fnode.id;
+                                        tnodeid = tnode.id;
                                         break;
                                     }
                                 }
@@ -259,12 +292,12 @@ function decodePacket(pkt)
                     }
                 }
                 if (secretkey) {
-                    addRecentKey(fnode, tnode, secretkey);
+                    addRecentKey(fnodeid, tnodeid, secretkey);
                 }
             }
             if (secretkey) {
-                msg.to = tnode.id;
-                msg.from = fnode.id;
+                msg.to = tnodeid;
+                msg.from = fnodeid;
                 const plain = crypto.decryptECB(slice(secretkey, 0, 16), encrypted);
                 if (type === PAYLOAD_TYPE_TXT_MSG) {
                     const timestampAndFlags = struct.unpack("<IB", plain);
@@ -283,9 +316,9 @@ function decodePacket(pkt)
                             return null;
                     }
                     msg.want_ack = true;
-                    msg.namekey = nodedb.namekey(msg.from);
+                    msg.namekey = nodedb.namekey(fnodeid);
                     msg.data.text_message = rtrim(substr(plain, offset), "\u0000");
-                    msg.data.checksum = crypto.sha256hash(substr(plain, 0, offset) + msg.data.text_message + fnode.nodeinfo.mc_public_key);
+                    msg.data.checksum = crypto.sha256hash(substr(plain, 0, offset) + msg.data.text_message + nodedb.getNode(fnodeid).nodeinfo.mc_public_key);
                     return msg;
                 }
             }
@@ -532,4 +565,15 @@ export function send(msg)
             }
         }
     }
+};
+
+export function tick()
+{
+    if (timers.tick("meshcore")) {
+        saveSharedKeys();
+    }
+};
+
+export function process(msg)
+{
 };

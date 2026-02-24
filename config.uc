@@ -138,7 +138,7 @@ export function setup()
             break;
     }
 
-    DEBUG0("Configuring\n");
+    DEBUG0("Starting up\nConfiguring\n");
 
     if (config.platform_aredn) {
         global.platform = require(`platforms.aredn.platform`);
@@ -152,8 +152,11 @@ export function setup()
     global.platform.mergePlatformConfig(config);
 
     ipmesh.setup(config);
+    router.registerApp(ipmesh);
     meshtastic.setup(config);
+    router.registerApp(meshtastic);
     meshcore.setup(config);
+    router.registerApp(meshcore);
     
     event.setup(config);
     global.event = event;
@@ -201,6 +204,9 @@ export function setup()
     function shutdown()
     {
         DEBUG0("Shutting down\n");
+        meshtastic.shutdown();
+        meshcore.shutdown();
+        ipmesh.shutdown();
         platform.shutdown();
         nodedb.shutdown();
         textmessage.shutdown();

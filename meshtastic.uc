@@ -6,9 +6,12 @@ import * as crypto from "crypto.crypto";
 import * as channel from "channel";
 import * as node from "node";
 import * as nodedb from "nodedb";
+import * as timers from "timers";
 
 const ADDRESS = "224.0.0.69";
 const PORT = 4403;
+
+const SAVE_INTERVAL = 19 * 60; // 19 minutes
 
 const BITFIELD_MQTT_OKAY = 1;
 const TRANSPORT_MECHANISM_MULTICAST_UDP = 6;
@@ -103,7 +106,7 @@ registerProto(
     }
 );
 
-const sharedKeys = {};
+let sharedKeys = {};
 
 function getSharedKey(priv, pub)
 {
@@ -114,6 +117,21 @@ function getSharedKey(priv, pub)
         sharedKeys[hkey] = sharedkey;
     }
     return sharedkey;
+}
+
+function loadSharedKeys()
+{
+    const data = platform.load("meshtastic.sharedkeys");
+    if (data) {
+        sharedKeys = data.sharedKeys;
+    }
+}
+
+function saveSharedKeys()
+{
+    platform.store("meshtastic.sharedkeys", {
+        sharedKeys: sharedKeys
+    });
 }
 
 function sendDirect(msg)
@@ -269,6 +287,15 @@ export function setup(config)
     }
     s.setopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 0);
     s.listen();
+
+    loadSharedKeys();
+
+    timers.setInterval("meshtastic", SAVE_INTERVAL);
+};
+
+export function shutdown()
+{
+    saveSharedKeys();
 };
 
 export function handle()
@@ -317,4 +344,15 @@ export function send(msg)
             }
         }
     }
+};
+
+export function tick()
+{
+     if (timers.tick("meshtastic")) {
+        saveSharedKeys();
+    }
+};
+
+export function process(msg)
+{
 };

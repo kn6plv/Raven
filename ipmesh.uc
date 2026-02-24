@@ -16,6 +16,10 @@ export function setup(config)
     s.listen();
 };
 
+export function shutdown()
+{
+};
+
 export function handle()
 {
     return s;
@@ -50,4 +54,12 @@ export function send(to, msg, canforward)
             DEBUG0("ipmesh:send error: %s\n", socket.error());
         }
     }
+};
+
+export function tick()
+{
+};
+
+export function process(msg)
+{
 };
