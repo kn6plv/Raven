@@ -1,5 +1,4 @@
 import * as meshtastic from "meshtastic";
-import * as telemetry from "telemetry";
 
 meshtastic.registerProto(
     "packet", null,
