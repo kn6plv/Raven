@@ -304,9 +304,9 @@ function htmlChannelConfig()
             <input value="${e.key}" oninput="typeChannelKey(${i}, event.target.value)" required minlength="4" maxlength="43" size="43" placeholder="Key" ${e.readonly ? "readonly" : ""} pattern="[\\-A-Za-z0-9+\\/]*={0,3}">
             <input value="${e.max}" oninput="typeChannelMax(${i}, event.target.value)" required minlength="2" maxlength="4" size="4" placeholder="Count" ${e.readonly ? "readonly" : ""}>
             <div><input ${e.badge ? "checked" : ""} type="checkbox" oninput="typeChannelBadge(${i}, event.target.checked)"></div>
-            <div><input ${e.images ? "checked" : ""} type="checkbox" oninput="typeChannelImages(${i}, event.target.checked)"></div>
-            <div><input ${e.telemetry ? "checked" : ""} type="checkbox" oninput="typeChannelTelemetry(${i}, event.target.checked)"></div>
-            <div><input ${e.winlink ? "checked" : ""} type="checkbox" oninput="typeChannelWinlink(${i}, event.target.checked)"></div>
+            <div><input ${e.images ? "checked" : ""} type="checkbox" oninput="typeChannelImages(${i}, event.target.checked)" ${e.meshcore ? "disabled" : ""}></div>
+            <div><input ${e.telemetry ? "checked" : ""} type="checkbox" oninput="typeChannelTelemetry(${i}, event.target.checked)" ${e.meshcore ? "disabled" : ""}></div>
+            <div><input ${e.winlink ? "checked" : ""} type="checkbox" oninput="typeChannelWinlink(${i}, event.target.checked)" ${e.meshcore ? "disabled" : ""}></div>
             <select onchange="genChannelKey(${i}, event.target.value)" ${e.readonly ? "disabled" : ""}>
                 <option>new key</option>
                 <option>1 byte</option>
@@ -978,11 +978,13 @@ function showNamekey(namekey)
             echannels = [];
             channels.forEach((c, i) => {
                 const nk = c.namekey.split(" ");
+                const meshcore = nk[1] === "izOH6cXN6mrJ5e26oRXNcg==";
                 echannels.push({
                     name: nk[0],
                     key: nk[1],
                     meshtastic: c.meshtastic,
-                    readonly: i < 2,
+                    meshcore: meshcore,
+                    readonly: i < 2 || meshcore,
                     max: c.state.max,
                     badge: c.state.badge,
                     images: useImage(c.namekey),
