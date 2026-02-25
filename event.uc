@@ -85,12 +85,22 @@ function fullNode(node)
             long_name: nodeinfo.long_name,
             role: nodeinfo.role ?? 0,
             lastseen: node.lastseen,
-            hops: node.hops,
             hw: nodeinfo.hw_model === HW_NATIVE ? "aredn" : nodeinfo.hw_model === HW_MESHCORE ? "meshcore" : "meshtastic",
             is_unmessagable: nodeinfo.is_unmessagable,
             public_key: nodeinfo.hw_model == HW_MESHCORE ? hexenc(nodeinfo.mc_public_key) : b64enc(nodeinfo.public_key),
             state: textmessage.state(nodedb.namekey(node.id))
         };
+        if (nodeinfo.hw_model === HW_MESHCORE) {
+            if (node.path) {
+                fnode.hops = length(node.path);
+            }
+            else {
+                fnode.hops = "Flood";
+            }
+        }
+        else {
+            fnode.hops = node.hops;
+        }
         const latitude_i = node.position?.latitude_i;
         const longitude_i = node.position?.longitude_i;
         if (latitude_i && longitude_i) {
