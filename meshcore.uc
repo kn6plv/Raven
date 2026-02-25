@@ -6,8 +6,22 @@ import * as nodedb from "nodedb";
 import * as crypto from "crypto.crypto";
 import * as timers from "timers";
 
+// =====
+// NOTES
+// =====
+//
+// Bridge packets:
+//
+// Packets arrive from the bridge in the form they have just arrived on the bridge devices, before any processing
+// Similarly, sent packets sent to the bridge appear on the bridge device as if they've just been received by the radio.
+// For arriving packets, this means for non-flood routing, the packet will had the bridge's hash as the first part of the
+// path as it's not yet been removed by the bridge (as it would if it was routing it to use).
+//
+// Channels:
+//
 // Public - 8b3387e9c5cdea6ac9e5edbaa115cd72 - izOH6cXN6mrJ5e26oRXNcg==
 // #NAME -> sha256(#NAME)[0..15]
+//
 
 const ADDRESS = "224.0.0.69";
 const PORT = 4402;
