@@ -1,6 +1,7 @@
 import * as struct from "struct";
 import * as timers from "timers";
 import * as node from "node";
+import * as utils from "utils";
 
 const SAVE_INTERVAL = 17 * 60; // 17 minutes
 const KEEP_WINDOW = 7 * 24 * 60 * 60; // 7 days
@@ -116,6 +117,8 @@ export function updateNodeinfo(id, nodeinfo)
                 cnodeinfo[k] = nodeinfo[k];
             }
         }
+        n.nodeinfo.long_name = utils.utf8validCopy(n.nodeinfo.long_name);
+        n.nodeinfo.short_name = utils.utf8validCopy(n.nodeinfo.short_name);
         saveNode(n);
     }
 };

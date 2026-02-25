@@ -4,6 +4,7 @@ import * as channel from "channel";
 import * as message from "message";
 import * as timers from "timers";
 import * as router from "router";
+import * as utils from "utils";
 
 let enabled = false;
 
@@ -73,8 +74,8 @@ export function addMessage(msg)
             id: msg.id,
             from: msg.from,
             when: msg.rx_time,
-            text: msg.data.text_message,
-            textfrom: msg.data.text_from,
+            text: utils.utf8validCopy(msg.data.text_message),
+            textfrom: utils.utf8validCopy(msg.data.text_from),
             structuredtext: msg.data.structured_text_message,
             replyid: msg.data.reply_id,
             checksum: msg.data.checksum
