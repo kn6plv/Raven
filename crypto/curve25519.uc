@@ -1,7 +1,6 @@
 // Copyright (c) 2007, 2013, 2014 Michele Bini
 // [License text omitted for brevity]
 
-import * as struct from "struct";
 import * as sha512 from "sha512";
 
 function c255lgetbit(n, c) {
@@ -359,45 +358,6 @@ function c255l_edwards_to_montgomery(y) {
   c255lreduce(u);
   return u;
 }
-
-/*
-// === Fully reduce to canonical form [0, p) ===
-function c255lcanonical(a) {
-  // Make a copy
-  const r = slice(a);
-  // First do a standard reduce
-  c255lreduce(r);
-  c255lreduce(r);
-  // Now check if r >= p = 2^255 - 19
-  // If so, subtract p
-  // p in limbs: [0xffed, 0xffff, ..., 0xffff, 0x7fff]
-  // Try subtracting p and see if we borrow
-  const t = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
-  let v;
-  t[0] = (v = r[0] - 0xffed) & 0xffff;
-  t[1] = (v = ((v >> 16) & 0xffff) + r[1] - 0xffff) & 0xffff;
-  t[2] = (v = ((v >> 16) & 0xffff) + r[2] - 0xffff) & 0xffff;
-  t[3] = (v = ((v >> 16) & 0xffff) + r[3] - 0xffff) & 0xffff;
-  t[4] = (v = ((v >> 16) & 0xffff) + r[4] - 0xffff) & 0xffff;
-  t[5] = (v = ((v >> 16) & 0xffff) + r[5] - 0xffff) & 0xffff;
-  t[6] = (v = ((v >> 16) & 0xffff) + r[6] - 0xffff) & 0xffff;
-  t[7] = (v = ((v >> 16) & 0xffff) + r[7] - 0xffff) & 0xffff;
-  t[8] = (v = ((v >> 16) & 0xffff) + r[8] - 0xffff) & 0xffff;
-  t[9] = (v = ((v >> 16) & 0xffff) + r[9] - 0xffff) & 0xffff;
-  t[10] = (v = ((v >> 16) & 0xffff) + r[10] - 0xffff) & 0xffff;
-  t[11] = (v = ((v >> 16) & 0xffff) + r[11] - 0xffff) & 0xffff;
-  t[12] = (v = ((v >> 16) & 0xffff) + r[12] - 0xffff) & 0xffff;
-  t[13] = (v = ((v >> 16) & 0xffff) + r[13] - 0xffff) & 0xffff;
-  t[14] = (v = ((v >> 16) & 0xffff) + r[14] - 0xffff) & 0xffff;
-  t[15] = ((v >> 16) & 0xffff) + r[15] - 0x7fff;
-  // If t[15] >= 0 (no borrow), use t; otherwise use r
-  const mask = (t[15] >> 15) & 1; // 1 if negative (borrow), 0 if ok
-  for (let i = 0; i < 16; i++) {
-    r[i] = mask ? r[i] : t[i];
-  }
-  return r;
-}
-*/
 
 export function ed25519_pubkey_to_x25519(edkey) {
   return c255l_edwards_to_montgomery(edkey);
