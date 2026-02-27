@@ -926,7 +926,8 @@ a
 }
 #winmenu button
 {
-    width: 88px;
+    display: block;
+    width: 100px;
     color: var(--menu-placeholder-color);
     background: var(--menu-bg-color);
     border: 1px solid var(--menu-border-color);
