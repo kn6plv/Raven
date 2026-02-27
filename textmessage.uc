@@ -264,6 +264,7 @@ export function process(msg)
                 addDirectMessage(msg);
             }
         }
+        nodedb.updateNode(nodedb.getNode(msg.from, false));
     }
     else if (node.toMe(msg) && msg.data?.routing) {
         if (msg.data.routing.error_reason === 0) {

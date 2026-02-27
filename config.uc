@@ -150,6 +150,8 @@ export function setup()
 
     global.platform.mergePlatformConfig(config);
 
+    node.setup(config);
+
     ipmesh.setup(config);
     router.registerApp(ipmesh);
     meshtastic.setup(config);
@@ -164,7 +166,6 @@ export function setup()
     websocket.setup(config);
     nodedb.setup(config);
     router.registerApp(nodedb);
-    node.setup(config);
 
     nodeinfo.setup(config);
     router.registerApp(nodeinfo);

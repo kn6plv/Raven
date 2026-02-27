@@ -101,7 +101,9 @@ export function getNodesByPublickeyHash(publicKeyHash, wantNative)
 
 export function updateNode(n)
 {
-    saveNode(n);
+    if (n) {
+        saveNode(n);
+    }
 };
 
 export function updateNodeinfo(id, nodeinfo)
