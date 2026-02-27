@@ -452,7 +452,9 @@ function getChannelUnread(channel)
 function catchup(channel)
 {
     clearTimeout(catchupTimeout);
-    catchupTimeout = setTimeout(_ => send({ cmd: "catchup", namekey: channel.namekey, id: channel.state.cursor }), 100);
+    const namekey = channel.namekey;
+    const id = channel.state.cursor;
+    catchupTimeout = setTimeout(_ => send({ cmd: "catchup", namekey: namekey, id: id }), 100);
 }
 
 function restartTextsObserver(channel)
