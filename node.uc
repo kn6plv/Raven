@@ -25,7 +25,7 @@ export const ROLE_CLIENT_BASE = 12;
 export const ROLE_ROOM = 32;
 export const ROLE_COMPANION = 33;
 
-const DEFAULT_HOPS = 5;
+const DEFAULT_HOPS = 7;
 
 let me = null;
 let fuzzyLocation = null;
