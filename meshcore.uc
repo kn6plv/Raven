@@ -72,6 +72,7 @@ const TEXT_TYPE_SIGNED = 0x02;
 let s = null;
 let bridge = ADDRESS;
 let bridgeHash = null;
+let twoPrefix = null;
 
 let sharedKeys = {};
 let xPriv = {};
@@ -150,7 +151,9 @@ function processAcks()
 {
     const when = time() - ACK_INTERVAL;
     for (let k in pendingAcks) {
-        if (pendingAcks[k].when < when) {
+        const ack = pendingAcks[k];
+        if (ack.when < when) {
+            nodedb.updatePath(ack.to, null);
             delete pendingAcks[k];
         }
     }
@@ -166,7 +169,10 @@ export function setup(config)
         bridge = config.meshcore.bridge;
     }
     bridgeHash = config.meshcore.bridgehash;
-    if (bridgeHash === null) {
+    if (bridgeHash !== null) {
+        twoPrefix = chr(bridgeHash, node.getMeshcoreHash());
+    }
+    else {
         print("Missing bridge hash - disabling direct routing\n");
     }
 
@@ -273,16 +279,17 @@ function decodePacket(pkt)
     const path = substr(pkt, offset + 1, pathlen);
     offset += pathlen + 1;
 
-    if (msg.flood) {
-        if (bridgeHash !== null) {
-            msg.path = path + chr(bridgeHash);
+    // If we know the prefix route to the bridge we can safely process the message path. If we dont then we
+    // just assume everything is okay. We will never send any direct routed packets.
+    if (twoPrefix) {
+        // For floods, we append both the bridge and ourselves to the path because we are forwarded the packet
+        // before the bridge has processed it and added itself to the path.
+        if (msg.flood) {
+            msg.path = path + twoPrefix;
         }
-    }
-    else {
-        // pathlen == 0: We are the destination for this packet. We may not be the target because of the 8-bit hash thing.
-        // pathlen == bridge: We are the last hop on the path before the final destination is reached.
-        if (!(pathlen === 0 || (pathlen === 1 && ord(path) === bridgeHash))) {
-            // Otherwise, not for us.
+        // For direct routes, the path must equal the bridge + ourselves, again because the bridge forwards
+        // the packet before it has processed it and removed itself from the path.
+        else if (path !== twoPrefix) {
             return null;
         }
     }
@@ -541,11 +548,12 @@ function makeNativeMsg(data)
 
 function makePktHeader(type, path)
 {
-    if (path && bridgeHash !== null) {
-        return chr((PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_DIRECT) + chr(length(path)) + path;
+    if (path && twoPrefix !== null) {
+        // Remove ourselves from the beginning of the path before appending it.
+        return chr((PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_DIRECT) + chr(length(path) - 1) + substr(path, 1);
     }
     // If we dont have a path, create a flood route building a new path.
-    return chr((PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_FLOOD) + chr(0);
+    return chr((PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_FLOOD) + chr(1, node.getMeshcoreHash());
 }
 
 function getDirectSendKey(msg)
@@ -667,7 +675,8 @@ function makeMeshcoreMsg(msg)
             if (msg.path) {
                 const keys = getDirectSendKey(msg);
                 if (keys) {
-                    const plain = chr(length(msg.path)) + msg.path + chr(PAYLOAD_TYPE_ACK) + struct.pack("4B", ...msg.data.routing.checksum);
+                    const returned_path = reverse(msg.path); // msg.path is how to get from here to there, the returned_path is the reverse of that.
+                    const plain = chr(length(returned_path)) + returned_path + chr(PAYLOAD_TYPE_ACK) + struct.pack("4B", ...msg.data.routing.checksum);
 
                     const encrypted = crypto.encryptECB(keys.sharedkey, pad(plain));
                     const hmac = crypto.sha256hmac(keys.sharedkey, encrypted);
