@@ -9,8 +9,6 @@ import * as textstore from "textstore";
 import * as router from "router";
 import * as winlink from "winlink";
 
-const HW_NATIVE = 254;
-const HW_MESHCORE = 253;
 const q = [];
 let merge = {};
 let update = null;
@@ -62,7 +60,7 @@ function basicNode(node)
             long_name: nodeinfo.long_name,
             role: nodeinfo.role ?? 0,
             lastseen: node.lastseen,
-            hw: nodeinfo.hw_model === HW_NATIVE ? "aredn" : nodeinfo.hw_model == HW_MESHCORE ? "meshcore" : "meshtastic",
+            platform: nodeinfo.platform,
             is_unmessagable: nodeinfo.is_unmessagable
         };
         if (node.favorite) {
@@ -85,21 +83,26 @@ function fullNode(node)
             long_name: nodeinfo.long_name,
             role: nodeinfo.role ?? 0,
             lastseen: node.lastseen,
-            hw: nodeinfo.hw_model === HW_NATIVE ? "aredn" : nodeinfo.hw_model === HW_MESHCORE ? "meshcore" : "meshtastic",
+            platform: nodeinfo.platform,
             is_unmessagable: nodeinfo.is_unmessagable,
-            public_key: nodeinfo.hw_model == HW_MESHCORE ? hexenc(nodeinfo.mc_public_key) : b64enc(nodeinfo.public_key),
             state: textmessage.state(nodedb.namekey(node.id))
         };
-        if (nodeinfo.hw_model === HW_MESHCORE) {
-            if (node.path) {
-                fnode.hops = length(node.path);
-            }
-            else {
-                fnode.hops = "Flood";
-            }
-        }
-        else {
-            fnode.hops = node.hops;
+        switch (nodeinfo.platform ?? 'unknown') {
+            case "meshcore":
+                fnode.public_key = hexenc(nodeinfo.mc_public_key);
+                if (node.path) {
+                    fnode.hops = length(node.path);
+                }
+                else {
+                    fnode.hops = "Flood";
+                }
+                break;
+            case "meshtastic":
+                fnode.public_key = b64enc(nodeinfo.public_key);
+                fnode.hops = node.hops;
+                break;
+            default:
+                break;
         }
         const latitude_i = node.position?.latitude_i;
         const longitude_i = node.position?.longitude_i;

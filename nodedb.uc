@@ -6,8 +6,6 @@ import * as utils from "utils";
 const SAVE_INTERVAL = 17 * 60; // 17 minutes
 const KEEP_WINDOW = 7 * 24 * 60 * 60; // 7 days
 
-const HW_NATIVE = 254;
-
 let nodedb;
 
 export function setup(config)
@@ -90,7 +88,7 @@ export function getNodesByPublickeyHash(publicKeyHash, wantNative)
     for (let k in nodedb) {
         const n = nodedb[k];
         if (n.nodeinfo?.mc_public_key !== null && ord(n.nodeinfo.mc_public_key) === publicKeyHash) {
-            const isNative = n.nodeinfo.hw_model === HW_NATIVE;
+            const isNative = n.nodeinfo.platform === "native";
             if ((wantNative && isNative) || (!wantNative && !isNative)) {
                 push(nodes, n);
             }
@@ -192,8 +190,8 @@ export function tick()
 
 export function process(msg)
 {
-    const n = getNode(msg.from, false);
-    if (n && msg.hop_start && msg.hop_limit) {
+    if (msg.hop_start && msg.hop_limit) {
+        const n = getNode(msg.from);
         n.hops = msg.hop_start - msg.hop_limit;
         saveNode(n);
     }

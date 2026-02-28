@@ -17,6 +17,19 @@ export function setup(config)
     timers.setInterval("nodeinfo", 60, config.nodeinfo?.interval ?? DEFAULT_INTERVAL);
 };
 
+function hw2platform(hw)
+{
+    switch (hw) {
+        case HW_NATIVE:
+            return "native";
+        case HW_MESHCORE:
+            return "meshcore";
+        case HW_PRIVATE:
+        default:
+            return "meshtastic";
+    }
+}
+
 function createNodeinfoMessage(to, namekey, extra)
 {
     const me = node.getInfo();
@@ -26,6 +39,7 @@ function createNodeinfoMessage(to, namekey, extra)
         short_name: me.short_name,
         macaddr: me.macaddr,
         hw_model: HW_NATIVE,
+        platform: "native",
         role: me.role,
         public_key: me.public_key,
         is_unmessagable: !textmessage.isMessagable()
@@ -40,6 +54,7 @@ function createAdvertMessage()
         role: me.role,
         name: me.long_name,
         hw_model: HW_NATIVE,
+        platform: "native",
         public_key: me.mc_public_key,
         position: {
             latitude_i: int(loc.lat * 10000000),
@@ -62,6 +77,7 @@ export function tick()
 export function process(msg)
 {
     if (msg.data?.nodeinfo) {
+        msg.data.nodeinfo.platform = hw2platform(msg.data.nodeinfo.hw_model);
         nodedb.updateNodeinfo(msg.from, msg.data.nodeinfo);
         if (node.toMe(msg) && msg.data.want_response) {
             router.queue(createNodeinfoMessage(msg.from, msg.namekey, {
@@ -76,7 +92,7 @@ export function process(msg)
         nodedb.updateNodeinfo(msg.from, {
             id: sprintf("!%08x", msg.from),
             long_name: advert.name,
-            hw_model: advert.hw_model,
+            platform: hw2platform(advert.hw_model),
             role: advert.role,
             mc_public_key: advert.public_key,
             is_unmessagable: advert.is_unmessagable,

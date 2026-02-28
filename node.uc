@@ -5,8 +5,6 @@ import * as crypto from "crypto.crypto";
 const LOCATION_PRECISION = 16;
 const LOCATION_SOURCE_MANUAL = 1;
 
-const HW_NATIVE = 254;
-
 const MAX_SHORT_NAME_LENGTH = 4;
 const MAX_LONG_NAME_LENGTH = 36;
 
@@ -104,7 +102,7 @@ function createNode(config)
         private_key: allkeys.private,
         public_key: allkeys.xpublic,
         mc_public_key: allkeys.edpublic,
-        hw_model: HW_NATIVE,
+        platform: "native",
         lat: null,
         lon: null,
         alt: null,

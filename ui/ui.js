@@ -129,7 +129,12 @@ function makeShortName(longname)
 function nodeExpand(node)
 {
     node.colors = nodeColors(node.num);
-    node.rolename = node.hw === "aredn" ? "AREDN" : roles[node.role] ? roles[node.role] : "?";
+    if (node.platform === "native") {
+        node.rolename = node.role === 0 ? "Relay" : "Node";
+    }
+    else {
+        node.rolename = roles[node.role] ?? "-";
+    }
     if (!node.short_name) {
         node.short_name = makeShortName(node.long_name);
     }
@@ -150,14 +155,14 @@ function htmlChannel(channel)
 function htmlNode(node)
 {
     const namekey = `DirectMessages ${node.num}`;
-    const filter = `${node.short_name} ${node.long_name} ${node.hw}`.toLowerCase();
+    const filter = `${node.short_name} ${node.long_name} ${node.platform}`.toLowerCase();
     let filtered = false;
     if (activeFilter && filter.indexOf(activeFilter) === -1) {
         filtered = true;
     }
-    return `<div id="${node.id}" class="node ${node.hw} ${rightSelection === namekey ? 'selected' : ''}" ${filtered ? 'style="display:none"' : ''} data-namekey="${namekey}" data-filter="${filter}" onclick="showNamekey('${namekey}')">
+    return `<div id="${node.id}" class="node ${node.platform} ${rightSelection === namekey ? 'selected' : ''}" ${filtered ? 'style="display:none"' : ''} data-namekey="${namekey}" data-filter="${filter}" onclick="showNamekey('${namekey}')">
         <div class="s" style="color:${node.colors.fcolor};background-color:${node.colors.bcolor}">${node.short_name}</div>
-        <div class="logo"></div>
+        ${node.platform ? '<div class="logo"></div>' : ''}
         <div class="m">
             <div class="l">${node.long_name}</div>
             <div class="r">${node.rolename}</div>
@@ -175,18 +180,18 @@ function htmlNodeDetail(node)
         map = `<a class="map" href="${node.mapurl}" target="_blank"><iframe src="${node.mapurl}"></iframe><div class="overlay"></div></a>`;
     }
     let hops = "";
-    if (node.hops !== null) {
+    if (node.hops !== null && node.hops !== undefined) {
         hops = `<div class="r"><div>Hops</div><div>${node.hops}</div></div>`;
     }
     return `<div class="node-detail">
-        <div class="node ${node.hw}">
+        <div class="node ${node.platform}">
             <div class="s" style="color:${node.colors.fcolor};background-color:${node.colors.bcolor}">${node.short_name}</div>
-            <div class="logo"></div>
+            ${node.platform ? '<div class="logo"></div>' : ''}
             <div class="m">
                 <div class="l">${node.long_name}<div class="star ${node.favorite}" onclick="toggleFav(event,${node.num})"></div></div>
                 <div class="r"><div>User Id</div><div>${node.id}</div></div>
-                <div class="r"><div>Platform</div><div>${node.hw == "aredn" ? "AREDN" : node.hw == "meshcore" ? "MeshCore" : "Meshtastic"}</div></div>
-                <div class="r"><div>Public Key</div><div>${node.public_key}</div></div>
+                <div class="r"><div>Platform</div><div>${node.platform == "native" ? "AREDN" : node.platform == "meshcore" ? "MeshCore" : "Meshtastic"}</div></div>
+                ${node.public_key ? '<div class="r"><div>Public Key</div><div>' + node.public_key + '</div></div>' : ''}
                 ${hops}
                 <div class="r"><div>Role</div><div>${node.rolename}</div></div>
                 <div class="t"><div>Last seen</div><div>${new Date(1000 * node.lastseen).toLocaleString()}</div></div>
@@ -258,11 +263,11 @@ function htmlText(text, useimage)
     if (!textmsg) {
         textmsg = `<div class="b"><div class="ack ${text.ack ? 'true' : ''}"></div><div class="t">` + plaintext.replace(/https?:\/\/[^ \t<]+/g, v => `<a target="_blank" href="${v}">${v}</a>`) + '</div><a href="#" class="re" onclick="setupReply(event)">Reply</a></div>';
     }
-    return `<div id="${text.id}" class="text ${n.num == me.num ? 'right ' : ''}${n.hw ? n.hw : ''}">
+    return `<div id="${text.id}" class="text ${n.num == me.num ? 'right ' : ''}${n.platform ?? ''}">
         ${reply}
         <div>
             <div class="s" style="color:${n.colors.fcolor};background-color:${n.colors.bcolor}">${n.short_name}</div>
-            ${n.hw ? '<div class="logo"></div>' : ''}
+            ${n.platform ? '<div class="logo"></div>' : ''}
             <div class="c">
                 <div class="l">${T(n.long_name)}<div>&nbsp;${new Date(1000 * text.when).toLocaleString()}</div></div>
                 ${textmsg}

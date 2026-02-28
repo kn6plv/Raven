@@ -19,39 +19,6 @@ const MAX_TEXT_MESSAGE_LENGTH = 200;
 
 let s = null;
 
-/*
- * Known port numbers
- *
- *  2 - hardware
- *  3 - position
- *  4 - nodeinfo
- *  5 - routing
- *  6 - admin
- *  7 - compressed
- *  8 - waypoint
- *  9 - audio
- * 10 - detectionsensor
- * 11 - alert
- * 12 - keyverification
- * 32 - reply
- * 33 - iptunnel
- * 34 - paxcounter
- * 64 - serial
- * 65 - storeandforward
- * 66 - rangetest
- * 67 - telemetry
- * 68 - zps
- * 69 - simulator
- * 70 - traceroute
- * 71 - neighborinfo
- * 72 - atak
- * 73 - mapreport
- * 74 - powerstress
- * 76 - reticulumtunnel
- * 77 - cayenne
- * 257 - atakforwarder
- */
-
 const portnum2Proto = {};
 const proto2Portnum = {};
 const protos = {};
