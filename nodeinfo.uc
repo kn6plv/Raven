@@ -102,6 +102,18 @@ export function process(msg)
             nodedb.updatePosition(msg.from, advert.position);
         }
     }
+    else if (!node.fromMe(msg)) {
+        const n = nodedb.getNode(msg.from);
+        if (!n.nodeinfo && !n.nodeinforequested) {
+            n.nodeinforequested = true;
+            router.queue(createNodeinfoMessage(msg.from, msg.namekey, {
+                data: {
+                    want_response: true
+                }
+            }));
+            nodedb.updateNode(n);
+        }
+    }
     else if (!nodedb.getNode(msg.from, false) && !node.fromMe(msg)) {
         nodedb.createNode(msg.from);
         router.queue(createNodeinfoMessage(msg.from, msg.namekey, {

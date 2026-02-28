@@ -108,6 +108,7 @@ export function updateNodeinfo(id, nodeinfo)
 {
     const n = getNode(id);
     if (!n.me) {
+        delete n.nodeinforequested;
         if (!n.nodeinfo) {
             n.nodeinfo = nodeinfo;
         }
