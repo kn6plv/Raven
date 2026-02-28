@@ -1,5 +1,38 @@
 import * as meshtastic from "meshtastic";
 
+/*
+ * Known port numbers
+ *
+ *  2 - hardware
+ *  3 - position
+ *  4 - nodeinfo
+ *  5 - routing
+ *  6 - admin
+ *  7 - compressed
+ *  8 - waypoint
+ *  9 - audio
+ * 10 - detectionsensor
+ * 11 - alert
+ * 12 - keyverification
+ * 32 - reply
+ * 33 - iptunnel
+ * 34 - paxcounter
+ * 64 - serial
+ * 65 - storeandforward
+ * 66 - rangetest
+ * 67 - telemetry
+ * 68 - zps
+ * 69 - simulator
+ * 70 - traceroute
+ * 71 - neighborinfo
+ * 72 - atak
+ * 73 - mapreport
+ * 74 - powerstress
+ * 76 - reticulumtunnel
+ * 77 - cayenne
+ * 257 - atakforwarder
+ */
+
 meshtastic.registerProto(
     "packet", null,
     {
@@ -66,6 +99,21 @@ meshtastic.registerProto(
         "21": "uint32 next_update",
         "22": "uint32 seq_number",
         "23": "uint32 precision_bits"
+    }
+);
+
+meshtastic.registerProto(
+    "nodeinfo", 4,
+    {
+        "1": "string id",
+        "2": "string long_name",
+        "3": "string short_name",
+        "4": "bytes macaddr",
+        "5": "enum hw_model",
+        "6": "bool is_licensed",
+        "7": "enum role",
+        "8": "bytes public_key",
+        "9": "bool is_unmessagable"
     }
 );
 
