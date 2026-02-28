@@ -130,7 +130,7 @@ function nodeExpand(node)
 {
     node.colors = nodeColors(node.num);
     if (node.platform === "native") {
-        node.rolename = node.role === 0 ? "Relay" : "Node";
+        node.rolename = node.role === 0 ? "Bridge" : "Node";
     }
     else {
         node.rolename = roles[node.role] ?? "-";
