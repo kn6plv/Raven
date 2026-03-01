@@ -586,11 +586,16 @@ function toggleFav(event, nodenum)
     const node = nodes[nodenum];
     if (node) {
         node.favorite = !node.favorite;
+        const nd = I(node.id);
         if (node.favorite) {
             event.target.classList.add("true");
+            
         }
         else {
             event.target.classList.remove("true");
+            nd.remove();
+            const nl = I("nodes");
+            nl.insertBefore(nd, nl.firstElementChild);
         }
         send({ cmd: "fav", id: nodenum, favorite: node.favorite });
     }
