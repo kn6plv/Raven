@@ -537,13 +537,7 @@ function makeNativeMsg(data)
     if (header[0] !== 0xC03E || header[1] + 6 !== length(data) || chksum[0] !== fletch16(data, 4, header[1])) {
         return null;
     }
-    try {
-        return decodePacket(substr(data, 4, length(data) - 6));
-    }
-    catch (e) {
-        DEBUG0("meshcore:makeNativeMsg error: %s\n%s\n", e, e.stacktrace);
-        return null;
-    }
+    return decodePacket(substr(data, 4, length(data) - 6));
 }
 
 function makePktHeader(type, path)

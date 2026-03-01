@@ -189,6 +189,10 @@ function read(ns)
                         }
                     }
                 }
+                else {
+                    DEBUG0("Bad or missing authentication.\n");
+                    ns.send("HTTP/1.1 400 Bad authentication\r\n");
+                }
                 if (!key) {
                     close(ns);
                 }

@@ -22,10 +22,10 @@ export function process()
         const msg = shift(q);
 
         if (node.fromMe(msg)) {
-            DEBUG0("%.2J\n", msg);
+            DEBUG1("%.2J\n", msg);
         }
         else {
-            DEBUG1("%.2J\n", msg);
+            DEBUG2("%.2J\n", msg);
         }
 
         // Give each app a chance at the message
@@ -173,7 +173,7 @@ export function tick()
                         queue(ipmesh.recv());
                     }
                     catch (e) {
-                        DEBUG0("ipmesh recv: %s\n", e.stacktrace);
+                        DEBUG0("ipmesh recv: %s\n%s\n", e, e.stacktrace);
                     }
                     break;
                 case "meshtastic":
@@ -182,7 +182,7 @@ export function tick()
                     }
                     catch (e)
                     {
-                        DEBUG0("meshtastic recv: %s\n", e.stacktrace);
+                        DEBUG0("meshtastic recv: %s\n%s\n", e, e.stacktrace);
                     }
                     break;
                 case "meshcore":
@@ -190,7 +190,7 @@ export function tick()
                         queue(meshcore.recv());
                     }
                     catch (e) {
-                        DEBUG0("meshcore recv: %s\n", e.stacktrace);
+                        DEBUG0("meshcore recv: %s\n%s\n", e, e.stacktrace);
                     }
                     break;
                 case "platform":

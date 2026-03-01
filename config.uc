@@ -218,7 +218,7 @@ export function setup()
 
 export function tick()
 {
-    DEBUG0("Tick\n");
+    DEBUG1("Tick\n");
     router.tick();
     gc("collect");
 };
