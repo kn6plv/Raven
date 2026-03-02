@@ -688,31 +688,8 @@ function useImage(namekey)
     return channel && !channel.meshtastic && channel.state.images;
 }
 
-function drag(event)
+function downloadImageFile(file)
 {
-    event.preventDefault();
-    if (useImage(rightSelection)) {
-        if (event.type === "dragenter") {
-            event.target.classList.add("drop");
-            event.target.placeholder = "Drop image here ...";
-        }
-        else {
-            event.target.classList.remove("drop");
-            event.target.placeholder = "Message ...";
-        }
-    }
-}
-
-function sendDrop(event)
-{
-    event.preventDefault();
-    event.target.classList.remove("drop");
-    event.target.placeholder = "Message ...";
-    if (!useImage(rightSelection)) {
-        return;
-    }
-    dropSelection = rightSelection;
-    const file = event.dataTransfer.files[0];
     switch (file?.type ?? "-") {
         case "image/jpeg":
         case "image/png":
@@ -720,6 +697,7 @@ function sendDrop(event)
         case "image/svg+xml":
         case "image/webp":
         {
+            dropSelection = rightSelection;
             const reader = new FileReader();
             reader.onload = function()
             {
@@ -753,7 +731,9 @@ function sendDrop(event)
                     context.imageSmoothingEnabled = true;
                     context.drawImage(img, 0, 0, canvas.width,  canvas.height);
                     canvas.toBlob(blob => {
-                        event.target.placeholder = "Uploading image ...";
+                        const t = Q("#post textarea");
+                        t.disabled = true;
+                        t.placeholder = "Uploading image ...";
                         send(blob);
                     }, "image/jpeg", 0.9);
                 }
@@ -765,6 +745,43 @@ function sendDrop(event)
         default:
             break;
     }
+}
+
+function drag(event)
+{
+    event.preventDefault();
+    if (useImage(rightSelection)) {
+        if (event.type === "dragenter") {
+            event.target.classList.add("drop");
+            event.target.placeholder = "Drop image here ...";
+        }
+        else {
+            event.target.classList.remove("drop");
+            event.target.placeholder = "Message ...";
+        }
+    }
+}
+
+function sendDrop(event)
+{
+    event.preventDefault();
+    event.target.classList.remove("drop");
+    event.target.placeholder = "Message ...";
+    if (!useImage(rightSelection)) {
+        return;
+    }
+    downloadImageFile(event.dataTransfer.files[0]);
+}
+
+function downloadImage()
+{
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".jpeg,.jpg,.gif,.png,.webp,.svg";
+    input.click();
+    input.onchange = function(event) {
+        downloadImageFile(event.target.files[0]);
+    };
 }
 
 function addChannel(idx)
@@ -1120,7 +1137,9 @@ function startup()
                     break;
                 case "uploaded":
                 {
-                    Q("#post textarea").placeholder = "Message ...";
+                    const t = Q("#post textarea");
+                    t.placeholder = "Message ...";
+                    t.disabled = false;
                     if (useImage(dropSelection)) {
                         const hostname = location.hostname.indexOf(".local.mesh") == -1 ? `${location.hostname}.local.mesh` : location.hostname;
                         I("texts").lastElementChild.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
