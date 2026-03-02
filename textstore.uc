@@ -94,15 +94,13 @@ function resendMessages(msg)
         for (let i = 0; i < limit; i++) {
             const tm = messages[start + i];
             router.queue(message.createMessage(msg.from, null, resend.namekey, "textstore_message", tm, {
-                hop_start: 0,
-                hop_limit: 0,
+                hop_limit: 0
             }));
         }
     }
     else {
         router.queue(message.createMessage(msg.from, null, resend.namekey, "textstore_message", null, {
-            hop_start: 0,
-            hop_limit: 0,
+            hop_limit: 0
         }));
     }
 }
@@ -222,7 +220,6 @@ export function process(msg)
                 router.queue(message.createMessage(msg.from, null, msg.namekey, "textstore_ack", {
                     id: msg.id
                 }, {
-                    hop_start: 0,
                     hop_limit: 0
                 }));
             }

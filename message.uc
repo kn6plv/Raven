@@ -14,9 +14,8 @@ export function createMessage(to, from, namekey, type, payload, extra)
         namekey: channel.getChannelByNameKey(namekey)?.namekey,
         id: math.rand(),
         rx_time: time(),
-        hop_limit: hops,
         priority: DEFAULT_PRIORITY,
-        hop_start: hops,
+        hop_limit: hops,
         transport: "native",
         data: {
             [type]: payload

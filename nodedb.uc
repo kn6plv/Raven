@@ -191,7 +191,7 @@ export function tick()
 
 export function process(msg)
 {
-    if (msg.hop_start && msg.hop_limit) {
+    if (msg.hop_start >= 0 && msg.hop_start >= msg.hop_limit) {
         const n = getNode(msg.from);
         n.hops = msg.hop_start - msg.hop_limit;
         saveNode(n);
