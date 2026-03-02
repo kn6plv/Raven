@@ -70,6 +70,16 @@ function recvDirect(msg)
     return node.forMe(msg) && !msg.channel;
 }
 
+function merge(to, from)
+{
+    for (let k in from) {
+        if (!(k in to)) {
+            to[k] = from[k];
+        }
+    }
+    return to;
+}
+
 function decodePacketData(msg)
 {
     if (msg.decoded) {
@@ -236,19 +246,24 @@ function makeNativeMsg(data)
 
 function makeMeshtasticMsg(msg)
 {
+    const nmsg = merge({
+        rx_snr: 0,
+        rx_rssi: 0,
+        relay_node: msg.from & 255,
+        transport_mechanism: TRANSPORT_MECHANISM_MULTICAST_UDP,
+        hop_start: msg.hop_limit,
+        data: merge({
+            bitfield: BITFIELD_MQTT_OKAY
+        }, msg.data)
+    }, msg);
     if (node.isBroadcast(msg)) {
         const chan = channel.getChannelByNameKey(msg.namekey);
         if (!chan) {
             return null;
         }
-        msg.channel = chan.meshtastichash;
+        nmsg.channel = chan.meshtastichash;
     }
-    msg.rx_snr = 0;
-    msg.rx_rssi = 0;
-    msg.relay_node = msg.from & 255;
-    msg.transport_mechanism = TRANSPORT_MECHANISM_MULTICAST_UDP;
-    msg.data.bitfield = BITFIELD_MQTT_OKAY;
-    return encodePacket(msg);
+    return encodePacket(nmsg);
 }
 
 export function recv()
