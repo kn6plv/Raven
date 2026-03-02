@@ -587,13 +587,12 @@ function toggleFav(event, nodenum)
     if (node) {
         node.favorite = !node.favorite;
         const nd = I(node.id);
+        nd.remove();
         if (node.favorite) {
             event.target.classList.add("true");
-            
         }
         else {
             event.target.classList.remove("true");
-            nd.remove();
             const nl = I("nodes");
             nl.insertBefore(nd, nl.firstElementChild);
         }
