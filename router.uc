@@ -2,6 +2,7 @@ import * as meshtastic from "meshtastic";
 import * as meshcore from "meshcore";
 import * as ipmesh from "ipmesh";
 import * as node from "node";
+import * as nodedb from "nodedb";
 import * as socket from "socket";
 import * as timers from "timers";
 import * as websocket from "websocket";
@@ -55,19 +56,22 @@ export function process()
             if (platform.getTargetById(msg.to)) {
                 toip = true;
             }
-            // Otherwise if it's from me, then it goes everywhere
-            else if (node.fromMe(msg)) {
-                toip = true;
-                tomeshtastic = true;
-                tomeshcore = true;
-            }
-            // If the message originated natively, it can go to one of the bridges. Note that we dont sent traffic
-            // from one bridge to another (no meshtastic <-> meshcore bridging) at the moment.
+            // Otherwise if it's from me or originated natively, then it goes everywhere. If we know the
+            // target network we can avoiding retransmitting it unnecessarily.
             else if (msg.transport === "native") {
-                tomeshtastic = true;
-                tomeshcore = true;
+                const tonodeinfo = node.isBroadcast(msg) ? null : nodedb.getNode(msg.to, false)?.nodeinfo;
+                if (node.fromMe(msg)) {
+                    toip = true;
+                }
+                if (!tonodeinfo || tonodeinfo.platform === "meshtastic") {
+                    tomeshtastic = true;
+                }
+                if (!tonodeinfo || tonodeinfo.platform === "meshcore") {
+                    tomeshcore = true;
+                }
             }
             // Incoming bridge traffic can only route via IP
+            // Note that we dont sent traffic from one bridge to another (no meshtastic <-> meshcore bridging) at the moment.
             else {
                 toip = true;
             }
