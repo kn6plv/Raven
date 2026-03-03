@@ -99,7 +99,7 @@ function resendMessages(msg)
         }
     }
     else {
-        router.queue(message.createMessage(msg.from, null, resend.namekey, "textstore_message", null, {
+        router.queue(message.createMessage(msg.from, null, resend.namekey, "textstore_message", {}, {
             hop_limit: 0
         }));
     }
@@ -109,8 +109,8 @@ export function syncMessageNamekey(namekey)
 {
     const stores = platform.getStoresByNamekey(namekey);
     if (stores[0]) {
-        if (!synced[namekey]) {
-            const to = stores[0].id;
+        const to = stores[0].id;
+        if (synced[namekey] !== to) {
             const state = textmessage.state(namekey);
             router.queue(message.createMessage(to, null, namekey, "textstore_resend", {
                 namekey: namekey,
@@ -200,11 +200,13 @@ export function process(msg)
             }
         }
         else if (msg.data.textstore_message) {
-            textmessage.addMessage(msg.data.textstore_message);
-            if (enabled) {
-                addMessage(msg.data.textstore_message);
+            if (msg.data.textstore_message.data) {
+                textmessage.addMessage(msg.data.textstore_message);
+                if (enabled) {
+                    addMessage(msg.data.textstore_message);
+                }
             }
-            synced[msg.namekey] = true;
+            synced[msg.namekey] = msg.from;
         }
     }
     if (msg.data?.text_message && node.forMe(msg) && channel.getLocalChannelByNameKey(msg.namekey)) {
