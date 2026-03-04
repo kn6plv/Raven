@@ -881,12 +881,23 @@ function genChannelKey(idx, value)
 
 function doneChannels()
 {
+    function getKey(key)
+    {
+        if (key.length >= 4 && atob(key)) {
+            return key;
+        }
+        if (key.length === 32 && key.match(/^[a-fA-F0-9]*$/)) {
+            return btoa(key.match(/\w{2}/g).map(a => String.fromCharCode(parseInt(a, 16))).join(""));
+        }
+        return null;
+    }
     const nchannels = [];
     const channelnames = [];
     echannels.forEach(e => {
         try {
-            if (e.name.length >= 1 && e.key.length >= 4 && e.name.search(/[ \t]/) === -1 && atob(e.key) && e.max >= 10 && e.max <= 1000) {
-                const namekey = `${e.name} ${e.key}`;
+            const key = getKey(e.key);
+            if (e.name.length >= 1 && key && e.name.search(/[ \t]/) === -1 && e.max >= 10 && e.max <= 1000) {
+                const namekey = `${e.name} ${key}`;
                 const channel = getChannel(namekey) || { meshtastic: false, state: { count: 0, cursor: null, max: 100, badge: true, images: true } };
                 channelnames.push({ namekey: namekey, max: e.max, badge: e.badge, images: e.images, telemetry: e.telemetry, winlink: e.winlink });
                 channel.state.max = e.max;
