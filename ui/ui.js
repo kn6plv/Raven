@@ -611,10 +611,13 @@ function sendMessage(event)
     }
     else if (event.key === "Enter" && !event.shiftKey) {
         if (text) {
-            I("texts").lastElementChild.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
+            const last = I("texts").lastElementChild;
+            if (last) {
+                last.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
+            }
             const namekey = rightSelection;
             const rid = replyid;
-            const lid = texts ? texts[texts.length - 1].id : null;
+            const lid = texts ? texts[texts.length - 1]?.id : null;
             setTimeout(_ => send({ cmd: "post", namekey: namekey, text: text.trim(), replyto: rid, last: lid }), 500);
             if (isDirect(rightSelection)) {
                 const fav = Q(`.node-detail .star:not(.true)`);
