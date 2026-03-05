@@ -66,6 +66,17 @@ let storeSort = 0;
     const cu = uci.cursor("/etc/local/uci");
     ucdata.macaddress = map(split(cu.get("hsmmmesh", "settings", "wifimac"), ":"), v => hex(v));
 
+    // Supernodes *only* forward meship traffic. We disable every other kind of bridge
+    // just in case they were enabled. Same for text storage as we dont want to store
+    // text for every mesh in the supernode mesh.
+    if (ucdata.isSupernode && config.meship) {
+        delete config.meshtastic;
+        delete config.meshcore;
+        delete config.textstore;
+        meshipBridgeEnabled = true;
+        config.meship.bridge = true;
+    }
+
     if (config.arednmesh) {
         config.meship = config.arednmesh;
         arednmeshEnabled = true;
@@ -77,15 +88,6 @@ let storeSort = 0;
                 storesEnabled = [ "*" ];
             }
         }
-    }
-
-    // Supernodes *only* forward meship traffic. We disable every other kind of bridge
-    // just in case they were enabled.
-    if (ucdata.isSupernode && config.meship) {
-        delete config.meshtastic;
-        delete config.meshcore;
-        meshipBridgeEnabled = true;
-        config.meship.bridge = true;
     }
 
     if (config.meshtastic) {
