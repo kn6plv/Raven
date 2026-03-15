@@ -45,7 +45,7 @@
     --menu-border-color: grey;
     --menu-hover-bg-color: #e8e8e8;
 }
-@media (prefers-color-scheme: xdark)
+@media (prefers-color-scheme: dark)
 {
 :root
 {
