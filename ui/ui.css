@@ -8,8 +8,11 @@
     --container-title-bg-color: white;
     --container-border-color: grey;
     --filter-border-color: grey;
-    --text-bg-color: white;
-    --text-border-color: black;
+    --text-fg-color: black;
+    --text-fg-color2: #e0e0e0;
+    --text-bg-color: #e0e0e0;
+    --text-bg-color2: #121f7e;
+    --text-border-color: transparent;
     --text-date-color: #606060;
     --text-reply-color: darkblue;
     --text-reply-border-color: darkblue;
@@ -19,7 +22,7 @@
     --light-filter: none;
     --map-filter: none;
     --post-text-color: black;
-    --post-bg-color: #f8f8f8;
+    --post-bg-color: #ffffff;
     --post-border-color: grey;
     --post-drop-border-color: green;
     --post-font-size: 16px;
@@ -42,18 +45,21 @@
     --menu-border-color: grey;
     --menu-hover-bg-color: #e8e8e8;
 }
-@media (prefers-color-scheme: dark)
+@media (prefers-color-scheme: xdark)
 {
 :root
 {
     --default-fg-color: #d0d0d0;
-    --body-bg-color: #181818;
+    --body-bg-color: #101010;
     --container-bg-color: #202020;
     --container-title-bg-color: #202020;
     --container-border-color: grey;
     --filter-border-color: #606060;
-    --text-bg-color: #202020;
-    --text-border-color: #d0d0d0;
+    --text-fg-color: #e0e0e0;
+    --text-fg-color2: #e0e0e0;
+    --text-bg-color: #303030;
+    --text-bg-color2: #121f7e;
+    --text-border-color: transparent;
     --text-date-color: #a0a0a0;
     --text-reply-color: lightblue;
     --text-reply-border-color: lightblue;
@@ -549,10 +555,18 @@ a
     margin: 2px 6px 2px 6px;
     padding: 8px 10px;
     border-radius: 17px;
+    color: var(--text-fg-color);
     background-color: var(--text-bg-color);
     white-space: pre-wrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+.text.right .t,
+.text.right .i,
+.text.right .w
+{
+    color: var(--text-fg-color2);
+    background-color: var(--text-bg-color2);
 }
 .text .w
 {
