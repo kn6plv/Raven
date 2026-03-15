@@ -959,6 +959,7 @@ a
 #winmenu button
 {
     display: block;
+    margin: auto 0;
     border: 0;
     color: inherit;
     background: inherit;
