@@ -310,7 +310,7 @@ function htmlChannelConfig()
             <input value="${e.max}" oninput="typeChannelMax(${i}, event.target.value)" required minlength="2" maxlength="4" size="4" placeholder="Count" ${e.readonly ? "readonly" : ""}>
             <div><input ${e.badge ? "checked" : ""} type="checkbox" oninput="typeChannelBadge(${i}, event.target.checked)"></div>
             <div><input ${e.images ? "checked" : ""} type="checkbox" oninput="typeChannelImages(${i}, event.target.checked)" ${e.meshcore ? "disabled" : ""}></div>
-            <div><input ${e.telemetry ? "checked" : ""} type="checkbox" oninput="typeChannelTelemetry(${i}, event.target.checked)" ${e.meshcore ? "disabled" : ""}></div>
+            <div><input ${e.telemetry ? "checked" : ""} type="checkbox" oninput="typeChannelTelemetry(${i}, event.target.checked)" ${e.readonly ? "disabled" : ""}></div>
             <div><input ${e.winlink ? "checked" : ""} type="checkbox" oninput="typeChannelWinlink(${i}, event.target.checked)" ${e.meshcore ? "disabled" : ""}></div>
             <select onchange="genChannelKey(${i}, event.target.value)" ${e.readonly ? "disabled" : ""}>
                 <option>new key</option>
@@ -836,7 +836,7 @@ function typeChannelImages(idx, value)
 
 function typeChannelTelemetry(idx, value)
 {
-    for (let i = 0; i < echannels.length; i++) {
+    for (let i = 1; i < echannels.length; i++) {
         echannels[i].telemetry = false;
     }
     if (value) {
