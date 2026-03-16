@@ -483,6 +483,7 @@ function updateTexts(msg)
     clearTimeout(updateTextTimeout);
     const channel = getChannel(msg.namekey);
     channel.state = msg.state;
+    resetPost(false);
     const t = I("texts");
     texts = msg.texts;
     t.innerHTML = msg.texts.map(t => htmlText(t, useImage(msg.namekey))).join("");
@@ -594,7 +595,7 @@ function sendMessage(event)
         Q("#post .count").innerText = `${Math.max(0, text.length)}/200`;
     }
     else if (event.key === "Escape") {
-        resetPost();
+        resetPost(true);
     }
     else if (event.key === "Enter" && !event.shiftKey) {
         if (text) {
@@ -613,7 +614,7 @@ function sendMessage(event)
                 }
             }
         }
-        resetPost();
+        resetPost(true);
         return false;
     }
     return true;
@@ -641,7 +642,7 @@ function setupReply(event)
     pt.focus();
 }
 
-function resetPost()
+function resetPost(clearContent)
 {
     replyid = null;
     const p = I("post");
@@ -649,7 +650,9 @@ function resetPost()
         p.firstElementChild.remove();
     }
     const t = Q(p, "textarea");
-    t.value = "";
+    if (clearContent) {
+        t.value = "";
+    }
     p.style.display = null;
     const w = I("winmenu");
     const i = I("imagemenu");
@@ -960,7 +963,7 @@ function winlinkFormDisplay(msg, action)
     texts.textContent = null;
     clearTimeout(updateTextTimeout);
     texts.appendChild(domWinlink(msg.formdata, msg.id, action));
-    resetPost();
+    resetPost(true);
     const win = Q(texts, "iframe").contentWindow;
     function fixup()
     {
@@ -1053,7 +1056,7 @@ function showNamekey(namekey)
                 });
             });
             I("texts").innerHTML = htmlChannelConfig();
-            resetPost();
+            resetPost(false);
         }
         else {
             if (namekey.indexOf("winlink-express-form ") === 0) {
@@ -1076,8 +1079,8 @@ function showNamekey(namekey)
             clearTimeout(updateTextTimeout);
             updateTextTimeout = setTimeout(_ => {
                 I("texts").innerHTML = "";
+                resetPost(false);
             }, 500);
-            resetPost();
         }
     }
 }
@@ -1185,7 +1188,7 @@ function startup()
                 }
                 case "winmenu":
                     if (winlinkMenu(msg)) {
-                        resetPost();
+                        resetPost(false);
                     }
                     break;
                 case "winform":
