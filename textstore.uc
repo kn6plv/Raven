@@ -194,12 +194,11 @@ export function process(msg)
 {
     if (node.toMe(msg) && msg.data) {
         if (msg.data.textstore_ack) {
-            const idx = `${msg.to}:${msg.data.textstore_ack.id}`;
-            const message = textmessage.getMessage(msg.namekey, idx);
+            const message = textmessage.getMessage(msg.namekey, msg.data.textstore_ack.id);
             if (message) {
                 message.ack = true;
                 textmessage.saveMessages(msg.namekey);
-                event.notify({ cmd: "ack", namekey: msg.namekey, id: idx }, `text ${msg.namekey} ${idx}`);
+                event.notify({ cmd: "ack", namekey: msg.namekey, id: msg.data.textstore_ack.id }, `ack ${msg.namekey} ${msg.data.textstore_ack.id}`);
             }
         }
         else if (msg.data.textstore_message) {
