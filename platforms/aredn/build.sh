@@ -33,6 +33,8 @@ cp $SRC/platforms/aredn/raven.init $ROOT/data/etc/init.d/raven
 
 cp $SRC/platforms/aredn/upgrade.conf $ROOT/data/etc/arednsysupgrade.d/KN6PLV.raven.conf
 
+echo "export const version = '${VERSION}';" > $ROOT/data/usr/local/raven/version.uc
+
 chmod 755 $ROOT/data/etc/local/mesh-firewall/21-raven
 chmod 755 $ROOT/data/www/apps/raven/* $ROOT/data/www/cgi-bin/apps/raven/admin $ROOT/data/www/cgi-bin/apps/raven/image
 

@@ -142,7 +142,7 @@ a
 #header .w
 {
     display: block;
-    margin: auto 0 8px -22px;
+    margin: auto 0 -4px -22px;
     font-size: 20px;
     font-weight: bold;
 }
@@ -150,6 +150,12 @@ a
 {
     font-size: 10px;
     line-height: 2px;
+}
+#version
+{
+    font-size: 8px;
+    padding-top: 4px;
+    color: grey;
 }
 #main
 {
