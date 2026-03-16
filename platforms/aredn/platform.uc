@@ -24,7 +24,7 @@ let bynamekey = {};
 let byid = {};
 let stores = {};
 let myid;
-let arednmeshEnabled = false;
+let meshipEnabled = false;
 let meshtasticEnabled = false;
 let meshcoreEnabled = false;
 let meshipBridgeEnabled = false;
@@ -66,20 +66,24 @@ let storeSort = 0;
     const cu = uci.cursor("/etc/local/uci");
     ucdata.macaddress = map(split(cu.get("hsmmmesh", "settings", "wifimac"), ":"), v => hex(v));
 
-    // Supernodes *only* forward meship traffic. We disable every other kind of bridge
+    // Supernodes can *only* forward meship traffic. We disable every other kind of bridge
     // just in case they were enabled. Same for text storage as we dont want to store
     // text for every mesh in the supernode mesh.
-    if (ucdata.isSupernode && config.meship) {
+    if (ucdata.isSupernode) {
         delete config.meshtastic;
         delete config.meshcore;
         delete config.textstore;
-        meshipBridgeEnabled = true;
-        config.meship.bridge = true;
     }
 
     if (config.arednmesh) {
         config.meship = config.arednmesh;
-        arednmeshEnabled = true;
+    }
+    if (config.meship) {
+        meshipEnabled = true;
+        if (ucdata.isSupernode) {
+            meshipBridgeEnabled = true;
+            config.meship.bridge = true;
+        }
         if (config.textstore) {
             if (config.textstore.stores) {
                 storesEnabled = map(config.textstore.stores, s => s.namekey);
@@ -96,7 +100,6 @@ let storeSort = 0;
     if (config.meshcore) {
         meshcoreEnabled = true;
     }
-
 
     const freemem = 1024 * match(fs.readfile("/proc/meminfo"), /MemFree: +(\d+) kB/)[1];
     const binarymem = freemem * MAX_BINARY_MEM;
@@ -365,7 +368,7 @@ function orderStores()
 
 /* export */ function publish(me, channels)
 {
-    if (!arednmeshEnabled) {
+    if (!meshipEnabled) {
         return;
     }
     myid = me.id;
