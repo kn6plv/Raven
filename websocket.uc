@@ -1,8 +1,11 @@
 import * as socket from "socket";
 import * as struct from "struct";
+import * as timers from "timers";
 import * as crypto from "crypto.crypto";
 
 const PORT = 4404;
+
+const PING_INTERVAL = 30;
 
 const MAGIC_KEY = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -31,6 +34,7 @@ export function setup(config)
     });
     s.listen();
     push(allhandles, s);
+    timers.setInterval("websocket", PING_INTERVAL);
 };
 
 export function handles()
@@ -238,4 +242,27 @@ export function send(to, msg)
             close(targets[i]);
         }
     }
+};
+
+function ping()
+{
+    const ping = struct.pack("2B", FIN | OP_PING, 0);
+    for (let i = 1; i < length(allhandles); i++) {
+        const r = allhandles[i].send(ping);
+        if (r === null) {
+            DEBUG0("websocket:ping error: %s\n", socket.error());
+            close(allhandles[i]);
+        }
+    }
+}
+
+export function tick()
+{
+    if (timers.tick("websocket")) {
+        ping();
+    }
+};
+
+export function process()
+{
 };

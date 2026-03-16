@@ -164,6 +164,7 @@ export function setup()
     router.registerApp(event);
 
     websocket.setup(config);
+    router.registerApp(websocket);
     nodedb.setup(config);
     router.registerApp(nodedb);
 
