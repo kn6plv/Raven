@@ -280,46 +280,34 @@ function htmlChannelConfig()
 {
     const body = echannels.map((e, i) => {
         const ne = echannels[i + 1] || {};
-        if (e.meshtastic) {
-            return `<form class="c">
-                <input value="Meshtastic" readonly><select onchange="typeChannelName(${i}, event.target.value)">
-                    <option ${e.name === "Disabled" ? "selected" : ""}>Disabled</option>
-                    <option ${e.name === "ShortTurbo" ? "selected" : ""}>ShortTurbo</option>
-                    <option ${e.name === "ShortSlow" ? "selected" : ""}>ShortSlow</option>
-                    <option ${e.name === "ShortFast" ? "selected" : ""}>ShortFast</option>
-                    <option ${e.name === "MediumSlow" ? "selected" : ""}>MediumSlow</option>
-                    <option ${e.name === "MediumFast" ? "selected" : ""}>MediumFast</option>
-                    <option ${e.name === "LongSlow" ? "selected" : ""}>LongSlow</option>
-                    <option ${e.name === "LongFast" ? "selected" : ""}>LongFast</option>
-                    <option ${e.name === "LongMod" ? "selected" : ""}>LongMod</option>
-                    <option ${e.name === "LongTurbo" ? "selected" : ""}>LongTurbo</option>
-                </select>
-                <input value="100" readonly>
-                <div><input ${e.badge ? "checked" : ""} type="checkbox" oninput="typeChannelBadge(${i}, event.target.checked)"></div>
-                <div><input disabled type="checkbox"></div>
-                <div><input disabled ${e.telemetry ? "checked" : ""} type="checkbox" oninput="typeChannelTelemetry(${i}, event.target.checked)"></div>
-                <div><input disabled type="checkbox"></div>
-                <select disabled><option>new key</option></select>
-                <button onclick="rmChannel(${i})" disabled>-</button>
-                <button onclick="addChannel(${i})" ${e.readonly && ne.readonly ? "disabled" : ""}>+</button>
-            </form>`;
-        }
         return `<form class="c">
-            <input value="${e.name}" oninput="typeChannelName(${i}, event.target.value)" required minlength="1" maxlength="11" size="11" placeholder="Name" ${e.readonly ? "readonly" : ""} pattern="[^ ]+">
-            <input value="${e.key}" oninput="typeChannelKey(${i}, event.target.value)" required minlength="4" maxlength="43" size="43" placeholder="Key" ${e.readonly ? "readonly" : ""} pattern="[\\-A-Za-z0-9+\\/]*={0,3}">
-            <input value="${e.max}" oninput="typeChannelMax(${i}, event.target.value)" required minlength="2" maxlength="4" size="4" placeholder="Count" ${e.readonly ? "readonly" : ""}>
+            <input value="${e.meshtastic ? "Meshtastic" : e.name}" oninput="typeChannelName(${i}, event.target.value)" required minlength="1" maxlength="11" size="11" placeholder="Name" ${e.aredn || e.meshtastic || e.meshcore ? "readonly" : ""} pattern="[^ ]+">
+            <input value="${e.meshtastic ? e.name : e.key}" oninput="typeChannelKey(${i}, event.target.value)" required minlength="4" maxlength="43" size="43" placeholder="Key" ${e.aredn || e.meshtastic || e.meshcore ? "readonly" : ""} pattern="[\\-A-Za-z0-9+\\/]*={0,3}">
+            <input value="${e.max}" oninput="typeChannelMax(${i}, event.target.value)" required minlength="2" maxlength="4" size="4" placeholder="Count">
             <div><input ${e.badge ? "checked" : ""} type="checkbox" oninput="typeChannelBadge(${i}, event.target.checked)"></div>
-            <div><input ${e.images ? "checked" : ""} type="checkbox" oninput="typeChannelImages(${i}, event.target.checked)" ${e.meshcore ? "disabled" : ""}></div>
-            <div><input ${e.telemetry ? "checked" : ""} type="checkbox" oninput="typeChannelTelemetry(${i}, event.target.checked)" ${e.readonly ? "disabled" : ""}></div>
-            <div><input ${e.winlink ? "checked" : ""} type="checkbox" oninput="typeChannelWinlink(${i}, event.target.checked)" ${e.meshcore ? "disabled" : ""}></div>
-            <select onchange="genChannelKey(${i}, event.target.value)" ${e.readonly ? "disabled" : ""}>
+            <div><input ${e.images ? "checked" : ""} type="checkbox" oninput="typeChannelImages(${i}, event.target.checked)" ${e.meshtastic || e.meshcore ? "disabled" : ""}></div>
+            <div><input ${e.telemetry ? "checked" : ""} type="checkbox" oninput="typeChannelTelemetry(${i}, event.target.checked)"></div>
+            <div><input ${e.winlink ? "checked" : ""} type="checkbox" oninput="typeChannelWinlink(${i}, event.target.checked)" ${e.meshtastic || e.meshcore ? "disabled" : ""}></div>
+            <select onchange="genChannelKey(${i}, event.target.value)" ${e.aredn ? "disabled" : ""}>
                 <option>new key</option>
                 <option>1 byte</option>
                 <option>128 bit</option>
                 <option>256 bit</option>
+                <option disabled>-- Meshtastic --</option>
+                <option>ShortTurbo</option>
+                <option>ShortSlow</option>
+                <option>ShortFast</option>
+                <option>MediumSlow</option>
+                <option>MediumFast</option>
+                <option>LongSlow</option>
+                <option>LongFast</option>
+                <option>LongMod</option>
+                <option>LongTurbo</option>
+                <option disabled>-- MeshCore --</option>
+                <option>Primary</option>
             </select>
-            <button onclick="rmChannel(${i})" ${e.readonly ? "disabled" : ""}>-</button>
-            <button onclick="addChannel(${i})" ${e.readonly && ne.readonly ? "disabled" : ""}>+</button>
+            <button onclick="rmChannel(${i})" ${e.aredn ? "disabled" : ""}>-</button>
+            <button onclick="addChannel(${i})">+</button>
         </form>`;
     }).join("");
     return `<div class="config">
@@ -859,22 +847,42 @@ function genChannelKey(idx, value)
         return Math.floor(Math.random() * 255);
     }
     let key = null;
+    echannels[idx].meshtastic = false;
+    echannels[idx].meshcore = false;
     switch (value) {
         case "1 byte":
-            key = [ rand() ];
+            key = bytesToBase64([ rand() ]);
             break;
         case "128 bit":
-            key = [ rand(), rand(), rand(), rand(), rand(), rand(), rand(), rand() ];
+            key = bytesToBase64([ rand(), rand(), rand(), rand(), rand(), rand(), rand(), rand() ]);
             break;
         case "256 bit":
-            key = [ rand(), rand(), rand(), rand(), rand(), rand(), rand(), rand(),
-                    rand(), rand(), rand(), rand(), rand(), rand(), rand(), rand() ];
+            key = bytesToBase64([ rand(), rand(), rand(), rand(), rand(), rand(), rand(), rand(),
+                                  rand(), rand(), rand(), rand(), rand(), rand(), rand(), rand() ]);
+            break;
+        case "ShortTurbo":
+        case "ShortSlow":
+        case "ShortFast":
+        case "MediumSlow":
+        case "MediumFast":
+        case "LongSlow":
+        case "LongFast":
+        case "LongMod":
+        case "LongTurbo":
+            key = "AQ==";
+            echannels[idx].name = value;
+            echannels[idx].meshtastic = true;
+            break;
+        case "Primary":
+            key = "izOH6cXN6mrJ5e26oRXNcg==";
+            echannels[idx].name = "MeshCore";
+            echannels[idx].meshcore = true;
             break;
         default:
             break;
     }
     if (key) {
-        echannels[idx].key = bytesToBase64(key);
+        echannels[idx].key = key;
         I("texts").innerHTML = htmlChannelConfig();
     }
 }
@@ -1025,12 +1033,13 @@ function showNamekey(namekey)
             channels.forEach((c, i) => {
                 const nk = c.namekey.split(" ");
                 const meshcore = nk[1] === "izOH6cXN6mrJ5e26oRXNcg==";
+                const aredn = c.namekey === "AREDN og==";
                 echannels.push({
                     name: nk[0],
                     key: nk[1],
                     meshtastic: c.meshtastic,
                     meshcore: meshcore,
-                    readonly: i < 2 || meshcore,
+                    aredn: aredn,
                     max: c.state.max,
                     badge: c.state.badge,
                     images: useImage(c.namekey),
