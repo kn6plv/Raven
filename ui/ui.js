@@ -360,7 +360,6 @@ function updateMe(msg)
     me = nodeExpand(msg.node);
     nodes[me.num] = me;
     I("post").style.display = me.is_unmessagable ? "none" : null;
-    I("version").innerText = me.version;
 }
 
 function updateNodes(msg)

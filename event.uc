@@ -8,7 +8,6 @@ import * as textmessage from "textmessage";
 import * as textstore from "textstore";
 import * as router from "router";
 import * as winlink from "winlink";
-import * as version from "version";
 
 const MAXNODES = 400;
 const MAXNODESPAYLOAD = 200;
@@ -77,7 +76,6 @@ function basicNode(node)
 function meNode(node)
 {
     node = basicNode(node);
-    node.version = version.version;
     node.align = align;
     return node;
 }
