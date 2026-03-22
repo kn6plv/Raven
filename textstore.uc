@@ -11,7 +11,6 @@ let enabled = false;
 const SAVE_INTERVAL = 5 * 60;
 const SYNC_FIRST_INTERVAL = 5;
 const SYNC_INTERVAL = 10;
-const RESYNC_INTERVAL = 60 * 60;
 const DEFAULT_STORE_SIZE = 50;
 const stores = {};
 const synced = {};
@@ -114,7 +113,7 @@ export function syncMessageNamekey(namekey)
             const state = textmessage.state(namekey);
             router.queue(message.createMessage(store.id, null, namekey, "textstore_resend", {
                 namekey: namekey,
-                cursor: state.cursor,
+                cursor: state.last,
                 limit: state.max
             }));
         }
@@ -124,13 +123,10 @@ export function syncMessageNamekey(namekey)
     }
 };
 
-function syncMessages(reset)
+function syncMessages()
 {
     const all = channel.getAllLocalChannels();
     for (let i = 0; i < length(all); i++) {
-        if (reset) {
-            delete synced[all[i].namekey];
-        }
         syncMessageNamekey(all[i].namekey);
     }
 }
@@ -170,7 +166,6 @@ export function setup(config)
         timers.setInterval("textstoresave", SAVE_INTERVAL);
     }
     timers.setInterval("textstoresync", SYNC_FIRST_INTERVAL, SYNC_INTERVAL);
-    timers.setInterval("textstoreresync", RESYNC_INTERVAL);
 };
 
 export function tick()
@@ -179,14 +174,11 @@ export function tick()
         saveToPlatform();
     }
     if (timers.tick("textstoresync")) {
-        syncMessages(false);
+        syncMessages();
         syncCount--;
         if (syncCount <= 0) {
             timers.cancel("textstoresync");
         }
-    }
-    if (timers.tick("textstoreresync")) {
-        syncMessages(true);
     }
 };
 
