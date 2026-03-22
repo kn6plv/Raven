@@ -456,7 +456,6 @@ function refreshTargets()
     const meshtasticForwarders = [];
     const meshcoreForwarders = [];
     const meshipForwarders = [];
-    const ostores = sprintf("%J", stores);
     stores = {};
     for (let i = 0; i < length(published); i++) {
         const service = published[i];
@@ -500,9 +499,6 @@ function refreshTargets()
     }
     bridges = uniq([ ...meshtasticForwarders, ...meshcoreForwarders, ...meshipForwarders ]);
     orderStores();
-    if (sprintf("%J", stores) !== ostores) {
-        timers.trigger("textstoreresync");
-    }
 }
 
 /* export */ function tick()
