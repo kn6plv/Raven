@@ -11,6 +11,11 @@ let nodedb;
 export function setup(config)
 {
     nodedb = platform.load("nodedb") ?? {};
+    // The following can be removed after people have updated
+    for (let k in nodedb) {
+        const n = nodedb[k];
+        n.sortkey = n.lastseen + (n.nodeinfo?.platform === "native" ? 10000000000 : 0);
+    }
     timers.setInterval("nodedb", SAVE_INTERVAL);
 };
 
@@ -48,6 +53,7 @@ function saveNode(n)
     if (!n.me) {
         nodedb[n.id] = n;
         n.lastseen = time();
+        n.sortkey = time() + (n.nodeinfo?.platform === "native" ? 10000000000 : 0);
         event.notify({ cmd: "node", id: n.id }, `node ${n.id}`);
     }
 }

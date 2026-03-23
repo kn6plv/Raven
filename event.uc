@@ -153,18 +153,7 @@ export function tick()
                 case "nodes":
                 {
                     const raw = nodedb.getNodes(false);
-                    sort(raw, (a, b) => {
-                        if (a.nodeinfo?.platform === "native") {
-                            if (b.nodeinfo?.platform === "native") {
-                                return b.lastseen - a.lastseen;
-                            }
-                            return -1;
-                        }
-                        if (b.nodeinfo?.platform === "native") {
-                            return 1;
-                        }
-                        return b.lastseen - a.lastseen;
-                    });
+                    sort(raw, (a, b) => b.sortkey - a.sortkey);
                     const nodes = [];
                     for (let i = 0; i < length(raw) && length(nodes) < MAXNODES; i++) {
                         const node = basicNode(raw[i]);
