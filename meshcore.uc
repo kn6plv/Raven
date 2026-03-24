@@ -75,8 +75,10 @@ const TEXT_TYPE_CLI = 0x01;
 const TEXT_TYPE_SIGNED = 0x02;
 
 let s = null;
-let prefixHash = null;
-let twoPrefix = null;
+let prefixHash1 = null;
+let prefixHash2 = null;
+let twoPrefix1 = null;
+let twoPrefix2 = null;
 
 let sharedKeys = {};
 let xPriv = {};
@@ -168,20 +170,15 @@ export function setup(config)
     if (!config.meshcore) {
         return;
     }
-    const bridgeHash = config.meshcore.bridgehash;
-    if (bridgeHash === null) {
-        print("Missing bridge hash - disabling direct routing\n");
-        prefixHash = node.getMeshcoreHash(1);
+    if (config.meshcore.bridgehash === null) {
+        print("Missing bridge hash - disabling MeshCore\n");
+        return;
     }
-    else {
-        if (bridgeHash > 255) {
-            prefixHash = node.getMeshcoreHash(2);
-            twoPrefix = struct.pack(">2H", bridgeHash, prefixHash);
-        }
-        else {
-            prefixHash = node.getMeshcoreHash(1);
-            twoPrefix = chr(bridgeHash, prefixHash);
-        }
+    prefixHash1 = node.getMeshcoreHash(1);
+    twoPrefix1 = struct.pack("BB", config.meshcore.bridgehash, prefixHash1);
+    if (config.meshcore.bridgehash > 255) {
+        prefixHash2 = node.getMeshcoreHash(2);
+        twoPrefix2 = struct.pack(">2H", config.meshcore.bridgehash, prefixHash2);
     }
 
     const address = config.meshcore.address;
@@ -232,6 +229,20 @@ function fletch16(data, offset, count)
         sum2 = (sum1 + sum2) % 255;
     }
     return (sum2 << 8) | sum1;
+}
+
+function revPath(type, path)
+{
+    if (type === PAYLOAD_PATHLEN_2) {
+        let revpath = "";
+        for (let i = length(path) - 2; i >= 0; i -= 2) {
+            revpath += substr(path, i, 2);
+        }
+        return revpath;
+    }
+    else {
+        return reverse(path);
+    }
 }
 
 function sendDirect(msg)
@@ -285,17 +296,19 @@ function decodePacket(pkt)
     }
 
     const pathinfo = ord(pkt, offset);
-    const pathlen = (pathinfo >= PAYLOAD_PATHLEN_2 ? 2 : 1) * (pathinfo & PAYLOAD_PATHLEN_MASK);
+    const pathtype = pathinfo & PAYLOAD_PATHLEN_2;
+    const pathlen = (pathtype ? 2 : 1) * (pathinfo & PAYLOAD_PATHLEN_MASK);
     const path = substr(pkt, offset + 1, pathlen);
     offset += pathlen + 1;
 
     // If we know the prefix route to the bridge we can safely process the message path. If we dont then we
     // just assume everything is okay. We will never send any direct routed packets.
+    const twoPrefix = pathtype === PAYLOAD_PATHLEN_2 ? twoPrefix2 : twoPrefix1;
     if (twoPrefix) {
         // For floods, we append both the bridge and ourselves to the path because we are forwarded the packet
         // before the bridge has processed it and added itself to the path.
         if (msg.flood) {
-            msg.path = path + twoPrefix;
+            msg.path = { type: pathtype, path: twoPrefix + revPath(pathtype, path) };
         }
         // For direct routes, the path must equal the bridge + ourselves, again because the bridge forwards
         // the packet before it has processed it and removed itself from the path.
@@ -404,7 +417,8 @@ function decodePacket(pkt)
                     {
                         let offset = 1;
                         const pathinfo = ord(plain);
-                        const pathlen = (pathinfo >= PAYLOAD_PATHLEN_2 ? 2 : 1) * (pathinfo & PAYLOAD_PATHLEN_MASK);
+                        const pathtype = pathinfo & PAYLOAD_PATHLEN_2;
+                        const pathlen = (pathtype ? 2 : 1) * (pathinfo & PAYLOAD_PATHLEN_MASK);
                         const path = substr(plain, offset, pathlen);
                         offset += pathlen;
                         if (offset < length(plain)) {
@@ -417,7 +431,7 @@ function decodePacket(pkt)
                                         msg.from = ack.to;
                                         msg.data.routing = { error_reason: 0, checksum: ack.checksum };
                                         msg.data.request_id = ack.id;
-                                        msg.returned_path = path;
+                                        msg.returned_path = { type: pathtype, path: path };
                                         return msg;
                                     }
                                     break;
@@ -553,19 +567,23 @@ function makeNativeMsg(data)
 
 function makePktHeader(type, path)
 {
-    if (prefixHash > 255) {
-        if (path && twoPrefix !== null) {
-            return chr((PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_DIRECT) + chr(PAYLOAD_PATHLEN_2 + length(path) / 2 - 1) + substr(path, 2);
+    if (path) {
+        // Remove ourselves from the beginning of the path before appending it.
+        if (path.type === PAYLOAD_PATHLEN_2) {
+            return chr((PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_DIRECT) + chr(PAYLOAD_PATHLEN_2 + length(path.path) / 2 - 1) + substr(path.path, 2);
         }
-        return struct.pack(">BBH", (PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_FLOOD, PAYLOAD_PATHLEN_2 + 1, prefixHash);
+        else {
+            return chr((PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_DIRECT) + chr(PAYLOAD_PATHLEN_1 + length(path.path) - 1) + substr(path.path, 1);
+        }
     }
     else {
-        if (path && twoPrefix !== null) {
-            // Remove ourselves from the beginning of the path before appending it.
-            return chr((PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_DIRECT) + chr(PAYLOAD_PATHLEN_1 + length(path) - 1) + substr(path, 1);
-        }
         // If we dont have a path, create a flood route building a new path.
-        return struct.pack("BBB", (PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_FLOOD, PAYLOAD_PATHLEN_1 + 1, prefixHash);
+        if (prefixHash2) {
+            return struct.pack(">BBH", (PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_FLOOD, PAYLOAD_PATHLEN_2 + 1, prefixHash2);
+        }
+        else {
+            return struct.pack("BBB", (PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_FLOOD, PAYLOAD_PATHLEN_1 + 1, prefixHash1);
+        }
     }
 }
 
@@ -689,15 +707,11 @@ function makeMeshcoreMsg(msg)
                 const keys = getDirectSendKey(msg);
                 if (keys) {
                     let plain;
-                    if (prefixHash > 255) {
-                        let return_path = "";
-                        for (let i = length(msg.path) - 2; i >= 0; i -= 2) {
-                            return_path += substr(msg.path, i, 2);
-                        }
+                    const returned_path = revPath(msg.path.type, msg.path.path);
+                    if (msg.path.type === PAYLOAD_PATHLEN_2) {
                         plain = chr(length(returned_path) / 2) + returned_path + chr(PAYLOAD_TYPE_ACK) + struct.pack("4B", ...msg.data.routing.checksum);
                     }
                     else {
-                        const returned_path = reverse(msg.path); // msg.path is how to get from here to there, the returned_path is the reverse of that.
                         plain = chr(length(returned_path)) + returned_path + chr(PAYLOAD_TYPE_ACK) + struct.pack("4B", ...msg.data.routing.checksum);
                     }
                     const encrypted = crypto.encryptECB(keys.sharedkey, pad(plain));

@@ -127,7 +127,7 @@ export function process(msg)
         }));
     }
     if (msg.flood && msg.path) {
-        nodedb.updatePath(msg.from, reverse(msg.path));
+        nodedb.updatePath(msg.from, msg.path);
     }
     if (msg.data?.returned_path) {
         nodedb.updatePath(msg.from, msg.data.returned_path);
