@@ -122,7 +122,10 @@ function nodeColors(n)
 
 function makeShortName(longname)
 {
-    const shortwords = longname.split(/[ _\-]/g);
+    if (longname.length <= 4) {
+        return longname;
+    }
+    const shortwords = longname.split(/[ _\-"']+/g);
     const shortwords0 = Array.from(shortwords[0])[0];
     if (shortwords0.codePointAt(0) > 128) {
         return shortwords0;
