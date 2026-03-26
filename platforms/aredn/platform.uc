@@ -69,11 +69,12 @@ let storeSort = 0;
 
     // Supernodes can *only* forward meship traffic. We disable every other kind of bridge
     // just in case they were enabled. Same for text storage as we dont want to store
-    // text for every mesh in the supernode mesh.
+    // text for every mesh in the supernode mesh. And make them unmessagable too.
     if (ucdata.isSupernode) {
         delete config.meshtastic;
         delete config.meshcore;
         delete config.textstore;
+        delete config.messages;
     }
 
     if (config.arednmesh) {
