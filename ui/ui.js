@@ -295,7 +295,6 @@ function htmlChannelConfig()
             <input value="${e.max}" oninput="typeChannelMax(${i}, event.target.value)" required minlength="2" maxlength="4" size="4" placeholder="Count">
             <div><input ${e.badge ? "checked" : ""} type="checkbox" oninput="typeChannelBadge(${i}, event.target.checked)"></div>
             <div><input ${e.images ? "checked" : ""} type="checkbox" oninput="typeChannelImages(${i}, event.target.checked)" ${e.meshtastic || e.meshcore ? "disabled" : ""}></div>
-            <div><input ${e.telemetry ? "checked" : ""} type="checkbox" oninput="typeChannelTelemetry(${i}, event.target.checked)"></div>
             <div><input ${e.winlink ? "checked" : ""} type="checkbox" oninput="typeChannelWinlink(${i}, event.target.checked)" ${e.meshtastic || e.meshcore ? "disabled" : ""}></div>
             <select onchange="genChannelKey(${i}, event.target.value)" ${e.aredn ? "disabled" : ""}>
                 <option>new key</option>
@@ -328,7 +327,6 @@ function htmlChannelConfig()
                 <div>Max messages</div>
                 <div>Notify</div>
                 <div>Images</div>
-                <div>Telemetry</div>
                 <div>Winlink</div>
             </div>
             ${body}
