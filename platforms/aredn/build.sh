@@ -40,6 +40,10 @@ chmod 755 $ROOT/data/www/apps/raven/* $ROOT/data/www/cgi-bin/apps/raven/admin $R
 mkdir -p $ROOT/data/usr/local/raven/winlink/forms
 cp -R $SRC/winlink/forms/* $ROOT/data/usr/local/raven/winlink/forms
 
+mkdir -p $ROOT/etc/cron.daily
+cp $SRC/platforms/aredn/update-cron.sh $ROOT/etc/cron.daily/raven-update
+chmod 755 $ROOT/etc/cron.daily/raven-update
+
 #
 # Make IPKG
 #
@@ -90,5 +94,8 @@ mkapk.py \
     -m 'tim.j.wilkinson@gmail.com' \
     -p ucode,curl \
     -o .
+
+cp -r raven_${VERSION}_all.ipk raven-alpha.ipk
+cp -f raven-${VERSION}.apk raven-alpha.apk
 
 rm -rf $ROOT/
