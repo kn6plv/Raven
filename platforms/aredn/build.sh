@@ -40,9 +40,9 @@ chmod 755 $ROOT/data/www/apps/raven/* $ROOT/data/www/cgi-bin/apps/raven/admin $R
 mkdir -p $ROOT/data/usr/local/raven/winlink/forms
 cp -R $SRC/winlink/forms/* $ROOT/data/usr/local/raven/winlink/forms
 
-mkdir -p $ROOT/etc/cron.daily
-cp $SRC/platforms/aredn/update-cron.sh $ROOT/etc/cron.daily/raven-update
-chmod 755 $ROOT/etc/cron.daily/raven-update
+mkdir -p $ROOT/data/etc/cron.daily
+cp $SRC/platforms/aredn/update-cron.sh $ROOT/data/etc/cron.daily/raven-update
+chmod 755 $ROOT/data/etc/cron.daily/raven-update
 
 #
 # Make IPKG
