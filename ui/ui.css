@@ -97,7 +97,9 @@
     display: flex;
     box-sizing: border-box;
 }
-title
+title,
+style,
+script
 {
     display: none;
 }
