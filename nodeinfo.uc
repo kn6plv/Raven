@@ -15,8 +15,8 @@ const DEFAULT_ADVERT_INTERVAL = 24 * 60 * 60;
  
 export function setup(config)
 {
-    timers.setInterval("nodeinfo", 60, config.nodeinfo?.interval ?? DEFAULT_INTERVAL);
-    timers.setInterval("advert", 60, config.advert?.interval ?? DEFAULT_ADVERT_INTERVAL);
+    timers.setInterval("nodeinfo", 120, config.nodeinfo?.interval ?? DEFAULT_INTERVAL);
+    timers.setInterval("advert", 120, config.advert?.interval ?? DEFAULT_ADVERT_INTERVAL);
 };
 
 function hw2platform(hw)
