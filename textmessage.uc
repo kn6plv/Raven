@@ -65,11 +65,11 @@ export function saveMessages(namekey)
     platform.badge(`messages.${namekey}`, chanmessages.badge ? chanmessages.count : 0);
 };
 
-export function addMessage(msg)
+function addNamekeyMessage(namekey, msg)
 {
-    const chanmessages = loadMessages(msg.namekey);
-    if (!channelindex[msg.namekey][msg.id]) {
-        channelindex[msg.namekey][msg.id] = true;
+    const chanmessages = loadMessages(namekey);
+    if (!channelindex[namekey][msg.id]) {
+        channelindex[namekey][msg.id] = true;
         push(chanmessages.messages, {
             id: msg.id,
             from: msg.from,
@@ -80,9 +80,14 @@ export function addMessage(msg)
             replyid: msg.data.reply_id,
             checksum: msg.data.checksum
         });
-        saveMessages(msg.namekey);
-        event.notify({ cmd: "text", namekey: msg.namekey, id: msg.id }, `text ${msg.namekey} ${msg.id}`);
+        saveMessages(namekey);
+        event.notify({ cmd: "text", namekey: namekey, id: msg.id }, `text ${namekey} ${msg.id}`);
     }
+}
+
+export function addMessage(msg)
+{
+    addNamekeyMessage(msg.namekey, msg);
 };
 
 export function getMessages(namekey)
@@ -165,10 +170,10 @@ export function updateChannelBadge(namekey, badge)
     }
 };
 
-function addDirectMessage(msg)
+function addDirectMessage(msg, namekey)
 {
-    updateChannelBadge(msg.namekey, true);
-    addMessage(msg);
+    updateChannelBadge(namekey, true);
+    addNamekeyMessage(namekey, msg);
 }
 
 export function createDirectMessage(to, text, structuredtext, replyto, last)
@@ -189,7 +194,7 @@ export function createDirectMessage(to, text, structuredtext, replyto, last)
     }
     const id = int(split(to, " ")[1]);
     const msg = message.createMessage(id, null, null, "text_message", text, extra);
-    addDirectMessage(msg);
+    addDirectMessage(msg, to);
     return msg;
 };
 
@@ -255,13 +260,13 @@ export function process(msg)
         }
         else if (channel.isDirect(msg.namekey)) {
             if (node.toMe(msg)) {
-                addDirectMessage(msg);
+                addDirectMessage(msg, `DirectMessages ${msg.from}`);
                 if (msg.want_ack) {
                     router.queue(message.createAckMessage(msg));
                 }
             }
             else if (node.fromMe(msg)) {
-                addDirectMessage(msg);
+                addDirectMessage(msg, msg.namekey);
             }
         }
         nodedb.updateNode(nodedb.getNode(msg.from, false));
