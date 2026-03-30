@@ -870,10 +870,13 @@ function genChannelKey(idx, value)
             key = bytesToBase64([ rand() ]);
             break;
         case "128 bit":
-            key = bytesToBase64([ rand(), rand(), rand(), rand(), rand(), rand(), rand(), rand() ]);
+            key = bytesToBase64([ rand(), rand(), rand(), rand(), rand(), rand(), rand(), rand(),
+                                  rand(), rand(), rand(), rand(), rand(), rand(), rand(), rand() ]);
             break;
         case "256 bit":
             key = bytesToBase64([ rand(), rand(), rand(), rand(), rand(), rand(), rand(), rand(),
+                                  rand(), rand(), rand(), rand(), rand(), rand(), rand(), rand(),
+                                  rand(), rand(), rand(), rand(), rand(), rand(), rand(), rand(),
                                   rand(), rand(), rand(), rand(), rand(), rand(), rand(), rand() ]);
             break;
         case "ShortTurbo":
