@@ -81,9 +81,10 @@ export function tick()
 export function process(msg)
 {
     if (msg.data?.nodeinfo) {
+        const unknown = !nodedb.getNode(msg.from, false);
         msg.data.nodeinfo.platform = hw2platform(msg.data.nodeinfo.hw_model);
         nodedb.updateNodeinfo(msg.from, msg.data.nodeinfo);
-        if (node.toMe(msg) && msg.data.want_response) {
+        if ((node.toMe(msg) && msg.data.want_response) || (unknown && !msg.data.reply_id)) {
             router.queue(createNodeinfoMessage(msg.from, msg.namekey, {
                 data: {
                     reply_id: msg.id
