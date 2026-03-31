@@ -293,7 +293,7 @@ function htmlChannelConfig()
         const ne = echannels[i + 1] || {};
         return `<form class="c">
             <input value="${e.meshtastic ? "Meshtastic" : e.name}" oninput="typeChannelName(${i}, event.target.value)" required minlength="1" maxlength="11" size="11" placeholder="Name" ${e.aredn || e.meshtastic || e.meshcore ? "disabled" : ""} pattern="[^ ]+">
-            <input value="${e.meshtastic ? e.name : e.key}" oninput="typeChannelKey(${i}, event.target.value)" required minlength="4" maxlength="43" size="43" placeholder="ID or Key" ${e.aredn || e.meshtastic || e.meshcore || e.name[0] === "#" ? "disabled" : ""} pattern="[\\-A-Za-z0-9+\\/]*={0,3}">
+            <input value="${e.meshtastic ? e.name : e.key}" oninput="typeChannelKey(${i}, event.target)" required minlength="4" maxlength="43" size="43" placeholder="ID or Key" ${e.aredn || e.meshtastic || e.meshcore || e.name[0] === "#" ? "disabled" : ""}>
             <input value="${e.max}" oninput="typeChannelMax(${i}, event.target.value)" required minlength="2" maxlength="4" size="4" placeholder="Count">
             <div><input ${e.badge ? "checked" : ""} type="checkbox" oninput="typeChannelBadge(${i}, event.target.checked)"></div>
             <div><input ${e.images ? "checked" : ""} type="checkbox" oninput="typeChannelImages(${i}, event.target.checked)" ${e.meshtastic || e.meshcore ? "disabled" : ""}></div>
@@ -813,15 +813,35 @@ function typeChannelName(idx, value)
         echannels[idx].key = key;
         kinput.value = key;
         kinput.disabled = true;
+        kinput.classList.remove("invalid");
     }
     else {
         kinput.disabled = false;
     }
 }
 
-function typeChannelKey(idx, value)
+function typeChannelKey(idx, target)
 {
-    echannels[idx].key = value;
+    let key = target.value;
+    echannels[idx].key = key;
+    let valid = false;
+    key = key.replace(/\s/g, "");
+    if (key.length === 32 && key.match(/^[a-fA-F0-9lO]*$/)) {
+        valid = !!btoa(key.replace(/l/g, "1").replace(/O/g, "0").match(/\w{2}/g).map(a => String.fromCharCode(parseInt(a, 16))).join(""));
+    }
+    try {
+        if (key.length >= 4 && atob(key)) {
+            valid = true;
+        }
+    }
+    catch (_) {
+    }
+    if (!valid) {
+        target.classList.add("invalid");
+    }
+    else {
+        target.classList.remove("invalid");
+    }
 }
 
 function typeChannelMax(idx, value)
@@ -916,8 +936,12 @@ function doneChannels()
             key = key.replace(/l/g, "1").replace(/O/g, "0");
             return btoa(key.match(/\w{2}/g).map(a => String.fromCharCode(parseInt(a, 16))).join(""));
         }
-        if (key.length >= 4 && atob(key)) {
-            return key;
+        try {
+            if (key.length >= 4 && atob(key)) {
+                return key;
+            }
+        }
+        catch (_) {
         }
         return null;
     }
@@ -926,8 +950,9 @@ function doneChannels()
     echannels.forEach(e => {
         try {
             const key = getKey(e.key);
-            if (e.name.length >= 1 && key && e.name.search(/[ \t]/) === -1 && e.max >= 10 && e.max <= 1000) {
-                const namekey = `${e.name} ${key}`;
+            const name = e.name.replace(/\s/g, "");
+            if (name.length >= 1 && key && e.max >= 10 && e.max <= 1000) {
+                const namekey = `${name} ${key}`;
                 const channel = getChannel(namekey) || { meshtastic: false, state: { count: 0, cursor: null, max: 100, badge: true, images: true } };
                 channelnames.push({ namekey: namekey, max: e.max, badge: e.badge, images: e.images, telemetry: e.telemetry, winlink: e.winlink });
                 channel.state.max = e.max;

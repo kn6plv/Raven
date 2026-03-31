@@ -37,7 +37,7 @@
     --config-table-even-bg-color: #f8f8f8;
     --config-table-separator-color: #d0d0d0;
     --config-subtitle-color: #808080;
-    --invalid-text-color: #800000;
+    --invalid-text-color: #ff0000;
     --disabled-text-color: #808080;
     --menu-bg-color: white;
     --menu-fg-color: black;
@@ -83,7 +83,7 @@
     --config-table-even-bg-color: #282828;
     --config-table-separator-color: #606060;
     --config-subtitle-color: #808080;
-    --invalid-text-color: #800000;
+    --invalid-text-color: #ff0000;
     --disabled-text-color: #808080;
     --menu-bg-color: black;
     --menu-fg-color: white;
@@ -733,7 +733,7 @@ a
 {
     border-bottom: 1px solid var(--config-table-separator-color);
 }
-.config .b .c input:invalid
+.config .b .c input.invalid
 {
     color: var(--invalid-text-color);
 }
