@@ -911,11 +911,11 @@ function doneChannels()
 {
     function getKey(key)
     {
-        if (key.length >= 4 && atob(key)) {
-            return key;
-        }
         if (key.length === 32 && key.match(/^[a-fA-F0-9]*$/)) {
             return btoa(key.match(/\w{2}/g).map(a => String.fromCharCode(parseInt(a, 16))).join(""));
+        }
+        if (key.length >= 4 && atob(key)) {
+            return key;
         }
         return null;
     }
