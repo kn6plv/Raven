@@ -27,7 +27,7 @@ export function setup(config)
     if (!config.websocket) {
         return;
     }
-    s = socket.create(socket.AF_INET, socket.SOCK_STRAM, 0);
+    s = socket.create(socket.AF_INET, socket.SOCK_STREAM, 0);
     s.setopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1);
     s.bind({
         port: config.websocket.port ?? PORT
