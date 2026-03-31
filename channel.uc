@@ -155,10 +155,13 @@ export function updateLocalChannels(channels)
     const newchannels = [];
     for (let namekey in localChannelByNameKey) {
         if (!oldLocalChannelByNameKey[namekey]) {
-            push(newchannels, localChannelByNameKey[namekey]);
+            push(newchannels, namekey);
+        }
+        else {
+            delete oldLocalChannelByNameKey[namekey];
         }
     }
-    return newchannels;
+    return { newchannels: newchannels, oldchannels: keys(oldLocalChannelByNameKey) };
 };
 
 export function isDirect(namekey)

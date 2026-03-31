@@ -411,7 +411,7 @@ function orderStores()
 
 /* export */ function badge(key, count)
 {
-    if (count === null) {
+    if (!count) {
         delete badges[key];
     }
     else {
