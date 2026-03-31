@@ -65,8 +65,11 @@ export function process()
                     toip = true;
                 }
                 if (msg.namekey !== "AREDN og==") {
-                    if (!tonodeinfo || tonodeinfo.platform === "meshtastic") {
-                        tomeshtastic = true;
+                    // Dont forward the MeshCore primary channel to Meshtastic
+                    if (msg.namekey !== "MeshCore izOH6cXN6mrJ5e26oRXNcg==") {
+                        if (!tonodeinfo || tonodeinfo.platform === "meshtastic") {
+                            tomeshtastic = true;
+                        }
                     }
                     // Dont forward any Meshtastic presets to MeshCore
                     if (!channel.isMeshtasticPreset(msg.namekey)) {
