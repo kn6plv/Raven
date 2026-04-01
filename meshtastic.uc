@@ -204,6 +204,7 @@ export function setup(config)
     }
     const address = config.meshtastic.address;
     s = socket.create(socket.AF_INET, socket.SOCK_DGRAM, 0);
+    s.setopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1);
     s.bind({
         port: PORT
     });
