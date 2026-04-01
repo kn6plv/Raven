@@ -18,12 +18,16 @@ const q = [];
 let merge = {};
 let update = null;
 let align = "right";
+let keyformat = "base64";
 
 export function setup(config)
 {
     update = config.update;
     if (config.ui?.message?.align === "left") {
         align = "left";
+    }
+    if (config.ui?.key?.format === "hex") {
+        keyformat = "hex";
     }
     timers.setInterval("event", 0, 10 * 60);
     timers.setInterval("keepalive", 60);
@@ -79,6 +83,7 @@ function meNode(node)
 {
     node = basicNode(node);
     node.align = align;
+    node.keyformat = keyformat;
     return node;
 }
 

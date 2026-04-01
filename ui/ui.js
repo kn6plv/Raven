@@ -150,6 +150,14 @@ function nodeExpand(node)
     return node;
 }
 
+function toDisplayKey(key)
+{
+    if (me.keyformat === "hex") {
+        return Array.from(atob(key), byte => byte.codePointAt(0).toString(16).padStart(2, "0")).join("");
+    }
+    return key;
+}
+
 function htmlChannel(channel)
 {
     const nk = channel.namekey.split(" ");
@@ -293,7 +301,7 @@ function htmlChannelConfig()
         const ne = echannels[i + 1] || {};
         return `<form class="c">
             <input value="${e.meshtastic ? "Meshtastic" : e.name}" oninput="typeChannelName(${i}, event.target.value)" required minlength="1" maxlength="11" size="11" placeholder="Name" ${e.aredn || e.meshtastic || e.meshcore ? "disabled" : ""} pattern="[^ ]+">
-            <input value="${e.meshtastic ? e.name : e.key}" oninput="typeChannelKey(${i}, event.target)" required minlength="4" maxlength="43" size="43" placeholder="ID or Key" ${e.aredn || e.meshtastic || e.meshcore || e.name[0] === "#" ? "disabled" : ""}>
+            <input value="${e.meshtastic ? e.name : toDisplayKey(e.key)}" oninput="typeChannelKey(${i}, event.target)" required minlength="4" maxlength="43" size="43" placeholder="ID or Key" ${e.aredn || e.meshtastic || e.meshcore || e.name[0] === "#" ? "disabled" : ""}>
             <input value="${e.max}" oninput="typeChannelMax(${i}, event.target.value)" required minlength="2" maxlength="4" size="4" placeholder="Count">
             <div><input ${e.badge ? "checked" : ""} type="checkbox" oninput="typeChannelBadge(${i}, event.target.checked)"></div>
             <div><input ${e.images ? "checked" : ""} type="checkbox" oninput="typeChannelImages(${i}, event.target.checked)" ${e.meshtastic || e.meshcore ? "disabled" : ""}></div>
@@ -826,12 +834,15 @@ function typeChannelKey(idx, target)
     echannels[idx].key = key;
     let valid = false;
     key = key.replace(/\s/g, "");
-    if (key.length === 32 && key.match(/^[a-fA-F0-9lO]*$/)) {
+    if ((key.length === 2 || key.length === 32 || key.length === 64) && key.match(/^[a-fA-F0-9lO]*$/)) {
         valid = !!btoa(key.replace(/l/g, "1").replace(/O/g, "0").match(/\w{2}/g).map(a => String.fromCharCode(parseInt(a, 16))).join(""));
     }
     try {
-        if (key.length >= 4 && atob(key)) {
-            valid = true;
+        if (key.length >= 4) {
+            key = atob(key);
+            if (key.length === 1 || key.length === 16 || key.length === 32) {
+                value = true;
+            }
         }
     }
     catch (_) {
@@ -932,7 +943,7 @@ function doneChannels()
     function getKey(key)
     {
         key = key.replace(/\s/g, "");
-        if (key.length === 32 && key.match(/^[a-fA-F0-9lO]*$/)) {
+        if ((key.length === 2 || key.length === 32 || key.length === 64) && key.match(/^[a-fA-F0-9lO]*$/)) {
             key = key.replace(/l/g, "1").replace(/O/g, "0");
             return btoa(key.match(/\w{2}/g).map(a => String.fromCharCode(parseInt(a, 16))).join(""));
         }
