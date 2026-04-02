@@ -1,3 +1,7 @@
+#!/bin/sh
+
+MESHFW_WAN_WEB=$(/sbin/uci -q get aredn.@wan[0].web_access)
+
 nft insert rule inet fw4 input_lan tcp dport 4404 accept
 nft insert rule inet fw4 input_wifi tcp dport 4404 accept
 nft insert rule inet fw4 input_dtdlink tcp dport 4404 accept
@@ -6,3 +10,6 @@ nft insert rule inet fw4 input_lan udp dport 4404 accept
 nft insert rule inet fw4 input_wifi udp dport 4404 accept
 nft insert rule inet fw4 input_dtdlink udp dport 4404 accept
 nft insert rule inet fw4 input_vpn udp dport 4404 accept
+if [ "${MESHFW_WAN_WEB}" != "0" ]; then
+    nft insert rule inet fw4 input_wan tcp dport 4404 accept
+fi
