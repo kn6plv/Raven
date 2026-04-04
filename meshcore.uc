@@ -709,7 +709,6 @@ function makeMeshcoreMsg(msg)
                     }
                 }
                 if (length(text) > MAX_TEXT_MESSAGE_LENGTH) {
-                    const pkts = [];
                     const words = split(msg.data.text_message, " ");
                     let line = `${name}:`;
                     if (msg.data.reply_id) {
@@ -718,20 +717,24 @@ function makeMeshcoreMsg(msg)
                             line = `@[${reply}]${line}`;
                         }
                     }
+                    const lines = [];
                     for (let i = 0; i < length(words); i++) {
-                        if (length(line) + length(words[i]) < MAX_TEXT_MESSAGE_LENGTH) {
+                        if (length(line) + length(words[i]) + 8 < MAX_TEXT_MESSAGE_LENGTH) {
                             line += " " + words[i];
                         }
                         else {
-                            const plain = pad(struct.pack("<IB", msg.rx_time, 0) + trim(line));
-                            const encrypted = crypto.encryptECB(chan.symmetrickey, plain);
-                            const hmac = crypto.sha256hmac(chan.symmetrickey, encrypted);
-                            push(pkts, wrap(makePktHeader(PAYLOAD_TYPE_GRP_TXT, null) + struct.pack("3B", chan.meshcorehash, hmac[0], hmac[1]) + encrypted));
+                            push(lines, trim(line));
                             line = `${name}: ${words[i]}`;
                         }
                     }
                     if (length(line) > 0) {
-                        const plain = pad(struct.pack("<IB", msg.rx_time, 0) + trim(line));
+                        push(lines, trim(line));
+                    }
+                    const lenlines = length(lines);
+                    const pkts = [];
+                    for (let i = 0; i < lenlines; i++) {
+                        const line = `${lines[i]} (${i + 1}/${lenlines})`;
+                        const plain = pad(struct.pack("<IB", msg.rx_time, 0) + line);
                         const encrypted = crypto.encryptECB(chan.symmetrickey, plain);
                         const hmac = crypto.sha256hmac(chan.symmetrickey, encrypted);
                         push(pkts, wrap(makePktHeader(PAYLOAD_TYPE_GRP_TXT, null) + struct.pack("3B", chan.meshcorehash, hmac[0], hmac[1]) + encrypted));

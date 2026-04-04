@@ -267,32 +267,25 @@ function makeMeshtasticMsg(msg)
         mchannel = chan.meshtastichash;
     }
     if (msg.data.text_message && length(msg.data.text_message) > MAX_TEXT_MESSAGE_LENGTH) {
-        const pkts = [];
         const words = split(msg.data.text_message, " ");
         let line = "";
+        const lines = [];
         for (let i = 0; i < length(words); i++) {
-            if (length(line) + length(words[i]) < MAX_TEXT_MESSAGE_LENGTH) {
+            if (length(line) + length(words[i]) + 8 < MAX_TEXT_MESSAGE_LENGTH) {
                 line += " " + words[i];
             }
             else {
-                push(pkts, encodePacket(merge({
-                    rx_snr: 0,
-                    rx_rssi: 0,
-                    relay_node: msg.from & 255,
-                    transport_mechanism: TRANSPORT_MECHANISM_MULTICAST_UDP,
-                    hop_start: msg.hop_limit,
-                    channel: mchannel,
-                    data:{
-                        bitfield: BITFIELD_MQTT_OKAY,
-                        text_message: trim(line)
-                    }
-                }, msg)));
-                router.queueId(msg.id);
-                msg.id++;
+                push(lines, trim(line));
                 line = words[i];
             }
         }
         if (length(line) > 0) {
+            push(lines, trim(line));
+        }
+        const lenlines = length(lines);
+        const pkts = [];
+        for (let i = 0; i < lenlines; i++) {
+            const line = `${lines[i]} (${i + 1}/${lenlines})`;
             push(pkts, encodePacket(merge({
                 rx_snr: 0,
                 rx_rssi: 0,
@@ -302,10 +295,11 @@ function makeMeshtasticMsg(msg)
                 channel: mchannel,
                 data:{
                     bitfield: BITFIELD_MQTT_OKAY,
-                    text_message: trim(line)
+                    text_message: line
                 }
             }, msg)));
             router.queueId(msg.id);
+            msg.id++;
         }
         return pkts;
     }
