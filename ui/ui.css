@@ -665,6 +665,10 @@ a
 {
     right: 0px;
 }
+.text .b .t a
+{
+    display: initial;
+}
 .config,
 .winlink
 {
