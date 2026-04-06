@@ -846,7 +846,7 @@ function typeChannelKey(idx, target)
         if (key.length >= 4) {
             key = atob(key);
             if (key.length === 1 || key.length === 16 || key.length === 32) {
-                value = true;
+                valid = true;
             }
         }
     }
