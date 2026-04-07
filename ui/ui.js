@@ -693,7 +693,7 @@ function resetPost(clearContent)
             p.style.display = "none";
         }
         w.style.display = winlink && cstate.winlink ? null : "none";
-        i.style.display = cstate.imates ? null : "none";
+        i.style.display = cstate.images ? null : "none";
     }
     else {
         t.placeholder = "Message ...";
@@ -1235,7 +1235,7 @@ function startup()
                     t.placeholder = "Message ...";
                     t.disabled = false;
                     if (useImage(dropSelection)) {
-                        const hostname = location.hostname.indexOf(".local.mesh") == -1 ? `${location.hostname}.local.mesh` : location.hostname;
+                        const hostname = location.hostname.match(/^\d+\.\d+\.\d+\.\d+$/) ? location.hostname : location.hostname.indexOf(".local.mesh") == -1 ? `${location.hostname}.local.mesh` : location.hostname;
                         I("texts").lastElementChild.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
                         setTimeout(_ => send({ cmd: "post", namekey: dropSelection, text: `[Image]`, structuredtext: [ { image: { url: `http://${hostname}/cgi-bin/apps/raven/image?i=${msg.name}` } } ] }), 500);
                     }
