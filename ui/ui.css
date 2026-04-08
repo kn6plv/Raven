@@ -901,11 +901,9 @@ a
 }
 .raven
 {
-    height: 50px;
     width: 100px;
-    background: url(raven.svg) no-repeat center;
-    background-size: 80px 80px;
-    filter: var(--light-filter);
+    scale: 0.8;
+    align-self: center;
 }
 .cog
 {
