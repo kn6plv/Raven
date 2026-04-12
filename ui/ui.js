@@ -281,7 +281,10 @@ function htmlText(text, useimage)
         }
     }
     if (!textmsg) {
-        textmsg = `<div class="b"><div class="ack ${text.ack ? 'true' : ''}"></div><div class="t">` + plaintext.replace(/https?:\/\/[^ \t<]+/g, v => `<a target="_blank" href="${v}">${v}</a>`) + '</div><a href="#" class="re" onclick="setupReply(event)">Reply</a></div>';
+        textmsg = `<div class="b"><div class="ack ${text.ack ? 'true' : ''}"></div><div class="t">`
+            + plaintext.replace(/https?:\/\/[^ \t<]+/g, v => `<a target="_blank" href="${v}">${v}</a>`)
+                       .replace(/@\[(.+)\]/g, (_, w) => `<span>${w}</span>`)
+            + '</div><a href="#" class="re" onclick="setupReply(event)">Reply</a></div>';
     }
     return `<div id="${text.id}" class="text ${n.num != me.num ? '' : 'me ' + me.align} ${n.platform ?? ''}">
         ${reply}

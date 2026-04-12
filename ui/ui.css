@@ -44,6 +44,8 @@
     --menu-placeholder-color: #202020;
     --menu-border-color: grey;
     --menu-hover-bg-color: #e8e8e8;
+    --name-fg-color: black;
+    --name-bg-color: white;
 }
 @media (prefers-color-scheme: dark)
 {
@@ -90,6 +92,8 @@
     --menu-placeholder-color: #c0c0c0;
     --menu-border-color: grey;
     --menu-hover-bg-color: #404040;
+    --name-fg-color: black;
+    --name-bg-color: #e0e0e0;
 }
 }
 *
@@ -668,6 +672,14 @@ a
 .text .b .t a
 {
     display: initial;
+}
+.text .b .t span
+{
+    display: initial;
+    color: var(--name-fg-color) !important;
+    background-color: var(--name-bg-color) !important;
+    padding: 4px 8px;
+    border-radius: 13px;
 }
 .config,
 .winlink
