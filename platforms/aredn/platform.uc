@@ -32,6 +32,7 @@ let storesEnabled = null;
 let hasMeshIpForwarder = false;
 let bridges = [];
 const badges = {};
+let pwatcher = null;
 let watcher = null;
 let maxBinarySize = 1 * 1024 * 1024;
 let inShutdown = false;
@@ -119,7 +120,9 @@ let ramMessages = false;
     }
 
     if (services.watch) {
-        watcher = services.watch("publish");
+        pwatcher = services.watch("publish");
+        // We need a proper file description which supports ioctl calls.
+        watcher = fs.fdopen(pwatcher.fileno());
     }
     else {
         timers.setInterval("aredn", 0, RESCAN_INTERVAL);
@@ -131,7 +134,8 @@ let ramMessages = false;
     inShutdown = true;
     services.unpublish(pubID);
     if (watcher) {
-        services.unwatch(watcher);
+        services.unwatch(pwatcher);
+        watcher.close();
     }
 }
 
@@ -538,18 +542,20 @@ function refreshTargets()
 
 /* export */ function handleChanges()
 {
-    for (;;) {
-        const v = socket.poll(0, [ watcher, socket.POLLIN|socket.POLLRDHUP ]);
-        if (!v[0] || !v[0][1]) {
-            break;
-        }
-        const e = watcher.read("line");
-        if (!length(e)) {
-            services.unwatch(watcher);
-            watcher = services.watch("publish");
-            break;
-        }
+    const FIONREAD_TYPE = 0x54;
+    const FIONREAD_NUM = 0x1B;
+
+    const len = watcher.ioctl(fs.IOC_DIR_READ, FIONREAD_TYPE, FIONREAD_NUM, 4);
+    if (len === null || len < 0) {
+        services.unwatch(pwatcher);
+        watcher.close();
+        pwatcher = services.watch("publish");
+        watcher = fs.fdopen(pwatcher.fileno());
     }
+    else if (len > 0) {
+        watcher.read(len);
+    }
+
     refreshTargets();
 }
 
