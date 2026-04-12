@@ -271,19 +271,26 @@ function makeMeshtasticMsg(msg)
     }
     if (msg.data.text_message && length(msg.data.text_message) > MAX_TEXT_MESSAGE_LENGTH) {
         const words = split(msg.data.text_message, " ");
-        let line = "";
+        let line = words[0];
         const lines = [];
-        for (let i = 0; i < length(words); i++) {
-            if (length(line) + length(words[i]) + 8 < MAX_TEXT_MESSAGE_LENGTH) {
+        const limit = MAX_TEXT_MESSAGE_LENGTH - 8;
+        for (let i = 1; i < length(words); i++) {
+            if (length(line) >= limit) {
+                push(lines, substr(line, 0, limit));
+                line = substr(line, limit);
+                i--;
+            }
+            else if (length(line) + length(words[i]) < limit) {
                 line += " " + words[i];
             }
             else {
-                push(lines, trim(line));
+                push(lines, line);
                 line = words[i];
             }
         }
-        if (length(line) > 0) {
-            push(lines, trim(line));
+        while (length(line) > 0) {
+            push(lines, substr(line, 0, limit));
+            line = substr(line, limit);
         }
         const lenlines = length(lines);
         const pkts = [];
