@@ -1,5 +1,4 @@
 import * as fs from "fs";
-import * as socket from "socket";
 import * as timers from "../../timers.uc";
 import * as uci from "uci";
 import * as services from "aredn.services";

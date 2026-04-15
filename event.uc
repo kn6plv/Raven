@@ -8,6 +8,7 @@ import * as textmessage from "textmessage";
 import * as textstore from "textstore";
 import * as router from "router";
 import * as winlink from "winlink";
+import * as commands from "commands";
 
 const MAXNODES = 1000;
 const MAXNODESSAFARI = 400;
@@ -332,6 +333,14 @@ export function tick()
                         }
                     }
                     catch (_) {
+                    }
+                    break;
+                }
+                case "/cmd":
+                {
+                    const reply = commands.post(msg.command);
+                    if (reply) {
+                        send({ event: "/reply", reply: reply }, msg.socket);
                     }
                     break;
                 }

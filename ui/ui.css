@@ -46,6 +46,8 @@
     --menu-hover-bg-color: #e8e8e8;
     --name-fg-color: black;
     --name-bg-color: white;
+    --command-fg-color: black;
+    --command-bg-color: #c0c0c0;
 }
 @media (prefers-color-scheme: dark)
 {
@@ -94,6 +96,8 @@
     --menu-hover-bg-color: #404040;
     --name-fg-color: black;
     --name-bg-color: #e0e0e0;
+    --command-fg-color: #e0e0e0;
+    --command-bg-color: #404040;
 }
 }
 *
@@ -575,13 +579,6 @@ a
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.text.me .t,
-.text.me .i,
-.text.me .w
-{
-    color: var(--text-fg-color2);
-    background-color: var(--text-bg-color2);
-}
 .text .w
 {
     display: flex;
@@ -618,6 +615,12 @@ a
     margin: 2px 6px 2px 6px;
     color: var(--text-fg-color2);
     background-color: var(--text-bg-color2);
+}
+.text.command .t
+{
+    margin: 2px 6px 2px 6px;
+    color: var(--command-fg-color);
+    background-color: var(--command-bg-color);
 }
 .text.right .b
 {

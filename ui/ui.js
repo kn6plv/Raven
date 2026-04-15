@@ -299,6 +299,21 @@ function htmlText(text, useimage)
     </div>`;
 }
 
+function htmlCommand(reply)
+{
+    const lines = `<div>${reply.join("</div><div>")}</div>`;
+    return `<div class="text me command ${me.align}">
+        <div>
+            <div class="s"></div>
+            <div class="c">
+                <div class="b">
+                    <div class="t">${lines}</div>
+                </div>
+            </div>
+        </div>
+    </div>`;
+}
+
 function htmlChannelConfig()
 {
     const body = echannels.map((e, i) => {
@@ -598,6 +613,13 @@ function updateNodeDetails(node)
     I("rheader").innerHTML = htmlNodeDetail(node);
 }
 
+function commandReply(msg)
+{
+    const t = I("texts");
+    t.appendChild(N(htmlCommand(msg.reply)));
+    t.lastElementChild.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
+}
+
 function toggleFav(event, nodenum)
 {
     const node = nodes[nodenum];
@@ -621,7 +643,6 @@ function sendMessage(event)
 {
     const text = event.target.value;
     if (event.type === "keyup") {
-        const cstate = getChannel(rightSelection)?.state ?? {};
         Q("#post .count").innerText = `${Math.max(0, text.length)}/${maxcount}`;
     }
     else if (event.key === "Escape") {
@@ -633,14 +654,19 @@ function sendMessage(event)
             if (last) {
                 last.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
             }
-            const namekey = rightSelection;
-            const rid = replyid;
-            const lid = texts ? texts[texts.length - 1]?.id : null;
-            setTimeout(_ => send({ cmd: "post", namekey: namekey, text: text.trim(), replyto: rid, last: lid }), 500);
-            if (isDirect(rightSelection)) {
-                const fav = Q(`.node-detail .star:not(.true)`);
-                if (fav) {
-                    fav.classList.add("true");
+            if (text[0] === "/") {
+                setTimeout(_ => send({ cmd: "/cmd", namekey: rightSelection, command: text.substring(1).trim().split(/\s+/g) }), 500);
+            }
+            else {
+                const namekey = rightSelection;
+                const rid = replyid;
+                const lid = texts ? texts[texts.length - 1]?.id : null;
+                setTimeout(_ => send({ cmd: "post", namekey: namekey, text: text.trim(), replyto: rid, last: lid }), 500);
+                if (isDirect(rightSelection)) {
+                    const fav = Q(`.node-detail .star:not(.true)`);
+                    if (fav) {
+                        fav.classList.add("true");
+                    }
                 }
             }
         }
@@ -1260,6 +1286,9 @@ function startup()
                     break;
                 case "winshow":
                     winlinkFormDisplay(msg, "Close");
+                    break;
+                case "/reply":
+                    commandReply(msg);
                     break;
                 case "beat":
                     break;
