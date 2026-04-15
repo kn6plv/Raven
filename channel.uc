@@ -18,8 +18,8 @@ const arednPublicChannel = "AREDN og==";
 global.channelByNameKey = {};
 global.channelsByMeshtasticHash = {};
 global.channelsByMeshcoreHash = {};
+global.localChannelByNameKey = {};
 let meshtasticChannel;
-let localChannelByNameKey = {};
 
 function expandSymmetricKey(key)
 {
@@ -68,7 +68,7 @@ export function isMeshcorePreset(namekey)
     return namekey === meshcorePublicNamekey;
 };
 
-export function addMessageNameKey(namekey)
+function addMessageNameKey(namekey)
 {
     if (channelByNameKey[namekey]) {
         return channelByNameKey[namekey];
@@ -82,7 +82,23 @@ export function addMessageNameKey(namekey)
     push(channelsByMeshtasticHash[meshtastichash] ?? (channelsByMeshtasticHash[meshtastichash] = []), chan);
     push(channelsByMeshcoreHash[meshcorehash] ?? (channelsByMeshcoreHash[meshcorehash] = []), chan);
     return chan;
-};
+}
+
+function removeMessageNameKey(namekey)
+{
+    const chan = channelByNameKey[namekey];
+    if (chan) {
+        let idx = index(channelsByMeshtasticHash[chan.meshtastichash], chan);
+        if (idx >= 0) {
+            splice(channelsByMeshtasticHash[chan.meshtastichash], idx, 1);
+        }
+        idx = index(channelsByMeshcoreHash[chan.meshcorehash], chan);
+        if (idx >= 0) {
+            splice(channelsByMeshcoreHash[chan.meshcorehash], idx, 1);
+        }
+        delete channelByNameKey[namekey];
+    }
+}
 
 function setLocalChannel(config)
 {
@@ -168,6 +184,28 @@ export function updateLocalChannels(channels)
         }
     }
     return { newchannels: newchannels, oldchannels: keys(oldLocalChannelByNameKey) };
+};
+
+export function updateRemoteNameKeys(namekeys)
+{
+    const remotekeys = {};
+    for (let nk in channelByNameKey) {
+        if (!localChannelByNameKey[nk]) {
+            remotekeys[nk] = true;
+        }
+    }
+    for (let i = 0; i < length(namekeys); i++) {
+        const namekey = namekeys[i];
+        if (!remotekeys[namekey]) {
+            addMessageNameKey(namekey);
+        }
+        else {
+            delete remotekeys[namekey];
+        }
+    }
+    for (let nk in remotekeys) {
+        removeMessageNameKey(nk);
+    }
 };
 
 export function isDirect(namekey)

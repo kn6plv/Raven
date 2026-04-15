@@ -487,7 +487,6 @@ function refreshTargets()
                 const namekey = service.channels[j];
                 if (!bynamekey[namekey]) {
                     bynamekey[namekey] = [];
-                    channel.addMessageNameKey(namekey);
                 }
                 push(bynamekey[namekey], service);
                 nchannels[namekey] = true;
@@ -519,6 +518,7 @@ function refreshTargets()
             }
         }
     }
+    channel.updateRemoteNameKeys(keys(bynamekey));
     bridges = uniq([ ...meshtasticForwarders, ...meshcoreForwarders, ...meshipForwarders ]);
     orderStores();
 }
