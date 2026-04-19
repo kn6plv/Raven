@@ -73,16 +73,18 @@ export function process()
                 else if (node.fromMe(msg) || tonodeinfo?.platform === "native") {
                     toip = true;
                 }
-                // Forward traffic to meshtastic if it's not a preset channel for another mesh
-                if (meshtastic.enabled && !channel.isAREDNPreset(msg.namekey) && !channel.isMeshcorePreset(msg.namekey)) {
-                    if (!tonodeinfo || tonodeinfo.platform === "meshtastic") {
-                        tomeshtastic = true;
+                if (!channel.isAREDNOnly(msg.namekey)) {
+                    // Forward traffic to meshtastic if it's not a preset channel for another mesh
+                    if (meshtastic.enabled && !channel.isMeshcorePreset(msg.namekey)) {
+                        if (!tonodeinfo || tonodeinfo.platform === "meshtastic") {
+                            tomeshtastic = true;
+                        }
                     }
-                }
-                // Forward traffic to meshcore if it's not a preset channel for another mesh
-                if (meshcore.enabled && !channel.isAREDNPreset(msg.namekey) && !channel.isMeshtasticPreset(msg.namekey)) {
-                    if (!tonodeinfo || tonodeinfo.platform === "meshcore") {
-                        tomeshcore = true;
+                    // Forward traffic to meshcore if it's not a preset channel for another mesh
+                    if (meshcore.enabled && !channel.isMeshtasticPreset(msg.namekey)) {
+                        if (!tonodeinfo || tonodeinfo.platform === "meshcore") {
+                            tomeshcore = true;
+                        }
                     }
                 }
             }

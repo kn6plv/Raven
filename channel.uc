@@ -13,7 +13,8 @@ const meshtasticChannelPresets = [
     "LongTurbo AQ=="
 ];
 const meshcorePublicNamekey = "MeshCore izOH6cXN6mrJ5e26oRXNcg==";
-const arednPublicChannel = "AREDN og==";
+const arednChannelPostfix = " og==";
+const arednPublicChannel = `AREDN${arednChannelPostfix}`;
 
 global.channelByNameKey = {};
 global.channelsByMeshtasticHash = {};
@@ -56,6 +57,11 @@ function getMeshcoreHash(key)
 export function isAREDNPreset(namekey)
 {
     return namekey === arednPublicChannel;
+};
+
+export function isAREDNOnly(namekey)
+{
+    return rindex(namekey, arednChannelPostfix) !== -1;
 };
 
 export function isMeshtasticPreset(namekey)

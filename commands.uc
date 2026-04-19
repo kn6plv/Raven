@@ -9,7 +9,7 @@ export function post(cmd)
             const all = channel.getAllChannelNamekeys();
             for (let i = 0; i < length(all); i++) {
                 const namekey = all[i];
-                if (ord(namekey) === 35 /* # */ || channel.isAREDNPreset(namekey) || channel.isMeshtasticPreset(namekey) || channel.isMeshcorePreset(namekey)) {
+                if (ord(namekey) === 35 /* # */ || ord(namekey) === 37 /* % */ || channel.isAREDNPreset(namekey) || channel.isMeshtasticPreset(namekey) || channel.isMeshcorePreset(namekey)) {
                     push(channels, split(namekey, " ")[0]);
                 }
             }
