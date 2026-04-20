@@ -16,39 +16,42 @@ function getPublicChannels()
     return sort(channels);
 }
 
+function getBridge()
+{
+    const services = platform.getTargetsByIdAndNamekey(null, null, true);
+    for (let i = 0; i < length(services); i++) {
+        const bridges = services[i].bridge;
+        for (let j = 0; j < length(bridges); j++) {
+            if (bridges[j].meship) {
+                return services[i].id;
+            }
+        }
+    }
+    return null;
+}
+
 export function post(cmd, id)
 {
     switch (cmd[0]) {
         case "channels":
         {
             if (cmd[1] === "world") {
-                let service = null;
-                const services = platform.getTargetsByIdAndNamekey(null, null, true);
-                for (let i = 0; i < length(services); i++) {
-                    const bridges = services[i].bridge;
-                    for (let j = 0; j < length(bridges); j++) {
-                        if (bridges[j].meship) {
-                            service = services[i];
-                            break;
-                        }
-                    }
-                }
-                if (service) {
-                    router.queue(message.createMessage(service.id, null,null, "command", {
+                const bridge = getBridge();
+                if (bridge) {
+                    router.queue(message.createMessage(bridge, null,null, "command", {
                         id: id,
                         cmd: "get_public_channels"
                     }, {
                         hop_limit: 0
                     }));
+                    break;
                 }
             }
-            else {
-                const reply = [
-                    "Public channels on local network", "&nbsp;",
-                    ...getPublicChannels()
-                ];
-                event.queue({ cmd: "/reply", reply: reply, socket: id });
-            }
+            const reply = [
+                "Public channels on local network", "&nbsp;",
+                ...getPublicChannels()
+            ];
+            event.queue({ cmd: "/reply", reply: reply, socket: id });
             break;
         }
         default:
