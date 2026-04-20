@@ -330,6 +330,8 @@ function htmlChannelConfig()
                 <option>1 byte</option>
                 <option>128 bit</option>
                 <option>256 bit</option>
+                <option disabled>-- AREDN --</option>
+                <option>Shared public</option>
                 <option disabled>-- Meshtastic --</option>
                 <option>ShortTurbo</option>
                 <option>ShortSlow</option>
@@ -836,7 +838,7 @@ function downloadImage()
 
 function addChannel(idx)
 {
-    echannels.splice(idx + 1, 0, { name: "", key: "", max: 100, badge: true, images: true, telemetry: false, winlink: false });
+    echannels.splice(idx + 1, 0, { name: "", key: "og==", max: 100, badge: true, images: true, telemetry: false, winlink: false });
     I("texts").innerHTML = htmlChannelConfig();
 }
 
@@ -951,6 +953,9 @@ function genChannelKey(idx, value)
                                   rand(), rand(), rand(), rand(), rand(), rand(), rand(), rand(),
                                   rand(), rand(), rand(), rand(), rand(), rand(), rand(), rand(),
                                   rand(), rand(), rand(), rand(), rand(), rand(), rand(), rand() ]);
+            break;
+        case "Shared public":
+            key = "og==";
             break;
         case "ShortTurbo":
         case "ShortSlow":
