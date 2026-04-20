@@ -19,8 +19,9 @@ const OP_PONG = 10;
 const FIN = 128;
 
 let s = null;
-let allhandles = [];
+const allhandles = [];
 const states = {};
+let clientid = 1;
 
 export function setup(config)
 {
@@ -58,6 +59,7 @@ function accept()
     if (ns) {
         push(allhandles, ns);
         states[ns] = {
+            id: clientid++,
             state: S_HTTPHEADER,
             s: ns,
             incoming: "",
@@ -128,10 +130,10 @@ function decode(state)
                 if (opcode & 128) {
                     switch (state.opcode) {
                         case OP_TEXT:
-                            push(messages, { text: state.msg, socket: state.s });
+                            push(messages, { text: state.msg, socket: state.id });
                             break;
                         case OP_BINARY:
-                            push(messages, { binary: state.msg, socket: state.s });
+                            push(messages, { binary: state.msg, socket: state.id });
                             break;
                         case OP_PING:
                             const reply = substr(state.msg, 0, 125);
@@ -215,7 +217,7 @@ function read(ns)
                     ns.send(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${digest}\r\n\r\n`);
                     state.state = S_MSGRECV;
                     state.incoming = substr(state.incoming, i + 4);
-                    return [ { text: '{"cmd":"connected","agent":"' + agent + '"}', socket: ns }, ...decode(state) ];
+                    return [ { text: '{"cmd":"connected","agent":"' + agent + '"}', socket: state.id }, ...decode(state) ];
                 }
             }
             break;
@@ -244,7 +246,19 @@ export function recv(handle)
 export function send(to, msg)
 {
     const hdr = encodeHeader(msg);
-    const targets = to ? [ null, to ] : allhandles;
+    let targets;
+    if (to) {
+        targets = [];
+        for (let ns in states) {
+            if (states[ns].id === to) {
+                targets = [ null, states[ns].s ];
+                break;
+            }
+        }
+    }
+    else {
+        targets = allhandles;
+    }
     for (let i = 1; i < length(targets); i++) {
         const r = targets[i].sendmsg([ hdr, msg ]);
         if (r === null) {

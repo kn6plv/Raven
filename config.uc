@@ -16,6 +16,7 @@ import * as textmessage from "textmessage";
 import * as position from "position";
 import * as traceroute from "traceroute";
 import * as textstore from "textstore";
+import * as commands from "commands";
 import * as device from "telemetry_device";
 import * as environmental_weewx from "telemetry_environmental_weewx";
 import * as airquality_purpleair from "telemetry_airquality_purpleair";
@@ -183,6 +184,8 @@ export function setup()
     router.registerApp(channel);
     textstore.setup(config);
     router.registerApp(textstore);
+    commands.setup(config);
+    router.registerApp(commands);
 
     if (config.telemetry?.environmental_weewx) {
         environmental_weewx.setup(config);

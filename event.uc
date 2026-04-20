@@ -338,10 +338,12 @@ export function tick()
                 }
                 case "/cmd":
                 {
-                    const reply = commands.post(msg.command);
-                    if (reply) {
-                        send({ event: "/reply", reply: reply }, msg.socket);
-                    }
+                    commands.post(msg.command, msg.socket);
+                    break;
+                }
+                case "/reply":
+                {
+                    send({ event: msg.cmd, reply: msg.reply }, msg.socket);
                     break;
                 }
                 case "ping":
