@@ -362,7 +362,7 @@ function htmlChannelConfig()
             </div>
             ${body}
         </div>
-        <div class="d"><button onclick="doneChannels()">Done</button></div>
+        <div class="d"><button onclick="doneChannels()">Save</button></div>
     </div>`;
 }
 
