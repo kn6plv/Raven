@@ -70,7 +70,8 @@ function basicNode(node)
             role: nodeinfo.role ?? 0,
             lastseen: node.lastseen,
             platform: nodeinfo.platform,
-            is_unmessagable: nodeinfo.is_unmessagable
+            is_unmessagable: nodeinfo.is_unmessagable,
+            textstore: nodeinfo.textstore
         };
         if (node.favorite) {
             bnode.state = textmessage.state(nodedb.namekey(node.id));
@@ -103,6 +104,7 @@ function fullNode(node)
             platform: nodeinfo.platform,
             is_unmessagable: nodeinfo.is_unmessagable,
             version: nodeinfo.version,
+            textstore: nodeinfo.textstore,
             state: textmessage.state(nodedb.namekey(node.id))
         };
         switch (nodeinfo.platform ?? 'unknown') {

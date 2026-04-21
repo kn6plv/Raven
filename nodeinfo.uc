@@ -13,11 +13,14 @@ const HW_MESHCORE = 253;
 
 const DEFAULT_INTERVAL = 3 * 60 * 60;
 const DEFAULT_ADVERT_INTERVAL = 24 * 60 * 60;
+
+let textstore = false;
  
 export function setup(config)
 {
     timers.setInterval("nodeinfo", 120, config.nodeinfo?.interval ?? DEFAULT_INTERVAL);
     timers.setInterval("advert", 120, config.advert?.interval ?? DEFAULT_ADVERT_INTERVAL);
+    textstore = !!config.textstore;
 };
 
 function hw2platform(hw)
@@ -46,7 +49,8 @@ function createNodeinfoMessage(to, namekey, extra)
         role: me.role,
         public_key: me.public_key,
         is_unmessagable: !textmessage.isMessagable(),
-        version: version.version
+        version: version.version,
+        textstore: textstore
     }, extra);
 }
 
