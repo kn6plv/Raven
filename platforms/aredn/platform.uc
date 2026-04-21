@@ -411,7 +411,6 @@ function orderStores()
                     break;
                 }
             }
-            const mchan = channel.getChannelsByMeshtasticHash(null)[0];
             push(info.bridge, { meshtastic: mconf });
         }
         if (meshcoreEnabled) {

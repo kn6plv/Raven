@@ -85,8 +85,16 @@ function addMessageNameKey(namekey)
     const meshcorehash = getMeshcoreHash(skey);
     const chan = { namekey: namekey, symmetrickey: skey, meshtastichash: meshtastichash, meshcorehash: meshcorehash, telemetry: false };
     channelByNameKey[namekey] = chan;
-    push(channelsByMeshtasticHash[meshtastichash] ?? (channelsByMeshtasticHash[meshtastichash] = []), chan);
-    push(channelsByMeshcoreHash[meshcorehash] ?? (channelsByMeshcoreHash[meshcorehash] = []), chan);
+    // The channelsBy... lists are used to speed packet decoding at the edge, so no point including channels in these
+    // lists if they can never decode the specific meshtasticore type.
+    if (!isAREDNOnly(namekey)) {
+        if (!isMeshcorePreset(namekey)) {
+            push(channelsByMeshtasticHash[meshtastichash] ?? (channelsByMeshtasticHash[meshtastichash] = []), chan);
+        }
+        if (!isMeshtasticPreset(namekey)) {
+            push(channelsByMeshcoreHash[meshcorehash] ?? (channelsByMeshcoreHash[meshcorehash] = []), chan);
+        }
+    }
     return chan;
 }
 
