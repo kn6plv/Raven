@@ -1242,6 +1242,9 @@ function startup()
                         rightSelection = msg.channels[0].namekey;
                     }
                     updateChannels(msg);
+                    if (rightSelection.indexOf("DirectMessages ") === -1 && !msg.channels.find(c => c.namekey === rightSelection)) {
+                        showNamekey(msg.channels[0].namekey)
+                    }
                     break;
                 case "texts":
                     if (rightSelection == msg.namekey) {

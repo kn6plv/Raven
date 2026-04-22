@@ -87,12 +87,15 @@ export function post(cmd, id)
                 {
                     if (cmd[2]) {
                         const name = `${cmd[2]} `;
-                        const newchannels = map(filter(channel.getAllLocalChannels(), c => index(c.namekey, name) !== 0), c => {
+                        const currchannels = channel.getAllLocalChannels();
+                        const newchannels = map(filter(currchannels, c => index(c.namekey, name) !== 0), c => {
                             const s = textmessage.state(c.namekey);
                             return { namekey: c.namekey, max: s.max, badge: s.badge, images: s.images, telemetry: c.telemetry, winlink: s.winlink };
                         });
-                        event.queue({ cmd: "newchannels", channels: newchannels });
-                        event.queue({ cmd: "/reply", reply: [ `Left channel ${name}` ], socket: id });
+                        if (length(currchannels) !== length(newchannels)) {
+                            event.queue({ cmd: "newchannels", channels: newchannels });
+                            event.queue({ cmd: "/reply", reply: [ `Left channel ${name}` ], socket: id });
+                        }
                     }
                     break;
                 }
