@@ -116,18 +116,41 @@ function removeMessageNameKey(namekey)
 
 function setLocalChannel(config)
 {
-    const chan = addMessageNameKey(config.namekey);
-    if (isMeshtasticPreset(config.namekey)) {
+    const namekey = config.namekey;
+    // Validate
+    const nk = split(namekey, " ");
+    // Two parts, separated by space
+    if (length(nk) !== 2) {
+        return false;
+    }
+    // Name cannot be more than 13 characters
+    if (length(nk[0]) > 13) {
+        return false;
+    }
+    try {
+        // Valid key sizes: 1, 16, 32
+        const lkey = length(b64dec(nk[1]));
+        if (!(lkey === 1 || lkey === 16 || lkey === 32)) {
+            return false;
+        }
+    }
+    catch (_) {
+        return false;
+    }
+
+    const chan = addMessageNameKey(namekey);
+    if (isMeshtasticPreset(namekey)) {
         chan.telemetry = true;
         meshtasticChannel = chan;
     }
-    if (isAREDNPreset(config.namekey)) {
+    if (isAREDNPreset(namekey)) {
         chan.telemetry = true;
     }
     if (config.telemetry !== null) {
         chan.telemetry = config.telemetry;
     }
-    localChannelByNameKey[config.namekey] = chan;
+    localChannelByNameKey[namekey] = chan;
+    return true;
 };
 
 export function getChannelsByMeshtasticHash(hash)

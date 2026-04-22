@@ -1,6 +1,7 @@
 import * as channel from "channel";
 import * as router from "router";
 import * as message from "message";
+import * as textmessage from "textmessage";
 import * as node from "node";
 
 function getPublicChannels()
@@ -35,24 +36,59 @@ export function post(cmd, id)
     switch (cmd[0]) {
         case "channels":
         {
-            if (cmd[1] === "world") {
-                const bridge = getBridge();
-                if (bridge) {
-                    router.queue(message.createMessage(bridge, null,null, "command", {
-                        id: id,
-                        cmd: "get_public_channels"
-                    }, {
-                        hop_limit: 0
-                    }));
+            switch (cmd[1] ?? "local") {
+                case "world":
+                {
+                    const bridge = getBridge();
+                    if (bridge) {
+                        router.queue(message.createMessage(bridge, null,null, "command", {
+                            id: id,
+                            cmd: "get_public_channels"
+                        }, {
+                            hop_limit: 0
+                        }));
+                        break;
+                    }
+                    // Fall through
+                }
+                case "local":
+                {
+                    const reply = [
+                        "Public channels on local network", "&nbsp;",
+                        ...getPublicChannels()
+                    ];
+                    event.queue({ cmd: "/reply", reply: reply, socket: id });
                     break;
                 }
+                case "join":
+                {
+                    if (cmd[2] && cmd[3]) {
+                        const newchannel = { namekey: `${cmd[2]} ${cmd[3]}`, max: 100, badge: true, images: false, telemetry: false, winlink: false };
+                        const currchannels = map(channel.getAllLocalChannels(), c => {
+                            const s = textmessage.state(c.namekey);
+                            return { namekey: c.namekey, max: s.max, badge: s.badge, images: s.images, telemetry: c.telemetry, winlink: s.winlink };
+                        });
+                        event.queue({ cmd: "newchannels", channels: [ ...currchannels, newchannel ] });
+                        event.queue({ cmd: "/reply", reply: [ `Joined channel ${cmd[2]}` ], socket: id });
+                    }
+                    break;
+                }
+                case "leave":
+                {
+                    if (cmd[2]) {
+                        const name = `${cmd[2]} `;
+                        const newchannels = map(filter(channel.getAllLocalChannels(), c => index(c.namekey, name) !== 0), c => {
+                            const s = textmessage.state(c.namekey);
+                            return { namekey: c.namekey, max: s.max, badge: s.badge, images: s.images, telemetry: c.telemetry, winlink: s.winlink };
+                        });
+                        event.queue({ cmd: "newchannels", channels: newchannels });
+                        event.queue({ cmd: "/reply", reply: [ `Left channel ${name}` ], socket: id });
+                    }
+                    break;
+                }
+                default:
+                    break;
             }
-            const reply = [
-                "Public channels on local network", "&nbsp;",
-                ...getPublicChannels()
-            ];
-            event.queue({ cmd: "/reply", reply: reply, socket: id });
-            break;
         }
         default:
             break;
