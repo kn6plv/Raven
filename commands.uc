@@ -10,8 +10,11 @@ function getPublicChannels()
     const all = channel.getAllChannelNamekeys();
     for (let i = 0; i < length(all); i++) {
         const namekey = all[i];
-        if (ord(namekey) === 35 /* # */ || ord(namekey) === 37 /* % */ || channel.isAREDNOnly(namekey) || channel.isMeshtasticPreset(namekey) || channel.isMeshcorePreset(namekey)) {
-            push(channels, split(namekey, " ")[0]);
+        if (channel.isMeshtasticPreset(namekey) || channel.isMeshcorePreset(namekey) || channel.isAREDNPreset(namekey)) {
+            push(channels, `<div class="cj">${split(namekey, " ")[0]}</div>`);
+        }
+        else if (ord(namekey) === 35 /* # */ || ord(namekey) === 37 /* % */ || channel.isAREDNOnly(namekey)) {
+            push(channels, `<div class="cj" onclick='cmd("/channels join ${namekey}")'>${split(namekey, " ")[0]}</div>`);
         }
     }
     return sort(channels);
@@ -63,13 +66,20 @@ export function post(cmd, id)
                 case "join":
                 {
                     if (cmd[2] && cmd[3]) {
-                        const newchannel = { namekey: `${cmd[2]} ${cmd[3]}`, max: 100, badge: true, images: false, telemetry: false, winlink: false };
+                        let join = true;
+                        const namekey = `${cmd[2]} ${cmd[3]}`;
+                        const newchannel = { namekey: namekey, max: 100, badge: true, images: false, telemetry: false, winlink: false };
                         const currchannels = map(channel.getAllLocalChannels(), c => {
                             const s = textmessage.state(c.namekey);
+                            if (c.namekey === namekey) {
+                                join = false;
+                            }
                             return { namekey: c.namekey, max: s.max, badge: s.badge, images: s.images, telemetry: c.telemetry, winlink: s.winlink };
                         });
-                        event.queue({ cmd: "newchannels", channels: [ ...currchannels, newchannel ] });
-                        event.queue({ cmd: "/reply", reply: [ `Joined channel ${cmd[2]}` ], socket: id });
+                        if (join) {
+                            event.queue({ cmd: "newchannels", channels: [ ...currchannels, newchannel ] });
+                            event.queue({ cmd: "/reply", reply: [ `Joined channel ${cmd[2]}` ], socket: id });
+                        }
                     }
                     break;
                 }

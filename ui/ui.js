@@ -641,6 +641,11 @@ function toggleFav(event, nodenum)
     }
 }
 
+function cmd(text)
+{
+    send({ cmd: "/cmd", namekey: rightSelection, command: text.substring(1).trim().split(/\s+/g) });
+}
+
 function sendMessage(event)
 {
     const text = event.target.value;
@@ -657,7 +662,7 @@ function sendMessage(event)
                 last.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
             }
             if (text[0] === "/") {
-                setTimeout(_ => send({ cmd: "/cmd", namekey: rightSelection, command: text.substring(1).trim().split(/\s+/g) }), 500);
+                setTimeout(_ => cmd(text), 500);
             }
             else {
                 const namekey = rightSelection;

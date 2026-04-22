@@ -622,6 +622,11 @@ a
     color: var(--command-fg-color);
     background-color: var(--command-bg-color);
 }
+.text.command .t .cj[onclick]:hover
+{
+    cursor: pointer;
+    text-decoration: underline;
+}
 .text.right .b
 {
     flex-direction: row-reverse;
