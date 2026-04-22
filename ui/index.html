@@ -37,7 +37,7 @@
                     <div id="rheader"></div>
                     <div id="texts"></div>
                     <div id="post">
-                        <textarea placeholder="Message ..." maxlength="1200" onkeyup="return sendMessage(event)" onkeypress="return sendMessage(event)" ondragenter="drag(event)" ondragleave="drag(event)" ondrop="sendDrop(event)"></textarea>
+                        <textarea placeholder="Message ..." maxlength="1200" onkeyup="return sendMessage(event)" onkeypress="return sendMessage(event)" ondragenter="drag(event)" ondragleave="drag(event)" ondrop="sendDrop(event)" onpaste="sendPaste(event)"></textarea>
                         <div class="count">0/1200</div>
                         <div id="postmenus">
                             <div id="winmenu" class="postmenu hover" style="display:none" onmouseleave="winlinkMenuHide()">

@@ -797,10 +797,10 @@ function downloadImageFile(file)
                 img.src = reader.result;
             }
             reader.readAsDataURL(file);
-            break;
+            return true;
         }
         default:
-            break;
+            return false;
     }
 }
 
@@ -828,6 +828,16 @@ function sendDrop(event)
         return;
     }
     downloadImageFile(event.dataTransfer.files[0]);
+}
+
+function sendPaste(event)
+{
+    if (!useImage(rightSelection)) {
+        return;
+    }
+    if (downloadImageFile(event.clipboardData.files[0])) {
+        event.preventDefault();
+    }
 }
 
 function downloadImage()
