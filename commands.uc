@@ -1,8 +1,10 @@
+import * as struct from "struct";
 import * as channel from "channel";
 import * as router from "router";
 import * as message from "message";
 import * as textmessage from "textmessage";
 import * as node from "node";
+import * as crypto from "crypto.crypto";
 
 function getPublicChannels()
 {
@@ -65,9 +67,20 @@ export function post(cmd, id)
                 }
                 case "join":
                 {
-                    if (cmd[2] && cmd[3]) {
+                    const name = cmd[2];
+                    let key;
+                    if (ord(name) === 35) { // #
+                        key = b64enc(struct.pack("16B", ...crypto.sha256hash(name)));
+                    }
+                    else if (ord(name) === 37) { // %
+                        key = "og==";
+                    }
+                    else {
+                        key = cmd[3];
+                    }
+                    if (name && key) {
                         let join = true;
-                        const namekey = `${cmd[2]} ${cmd[3]}`;
+                        const namekey = `${name} ${key}`;
                         const newchannel = { namekey: namekey, max: 100, badge: true, images: false, telemetry: false, winlink: false };
                         const currchannels = map(channel.getAllLocalChannels(), c => {
                             const s = textmessage.state(c.namekey);
@@ -78,7 +91,7 @@ export function post(cmd, id)
                         });
                         if (join) {
                             event.queue({ cmd: "newchannels", channels: [ ...currchannels, newchannel ] });
-                            event.queue({ cmd: "/reply", reply: [ `Joined channel ${cmd[2]}` ], socket: id });
+                            event.queue({ cmd: "/reply", reply: [ `Joined channel ${name}` ], socket: id });
                         }
                     }
                     break;
