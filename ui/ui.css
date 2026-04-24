@@ -683,7 +683,7 @@ a
 }
 .text .b .t span
 {
-    display: initial;
+    display: inline-block;
     color: var(--name-fg-color) !important;
     background-color: var(--name-bg-color) !important;
     padding: 4px 8px;
