@@ -435,6 +435,7 @@ function updateNode(msg)
         const s = I("nodes-scroll");
         const c = s.getBoundingClientRect();
         let n = I(msg.node.num);
+        let scrollTop = s.scrollTop;
         if (n) {
             const r = n.getBoundingClientRect();
             if (r.bottom >= c.top && r.top < c.bottom) {
@@ -443,6 +444,9 @@ function updateNode(msg)
                 }
             }
             else {
+                if (r.bottom < c.top) {
+                    scrollTop -= n.offsetHeight;
+                }
                 nl.removeChild(n);
                 n = null;
             }
@@ -454,7 +458,7 @@ function updateNode(msg)
                 nd.classList.add("fade");
             }
             else {
-                s.scrollTop += nd.offsetHeight;
+                s.scrollTop = scrollTop + nd.offsetHeight;
             }
         }
     }
