@@ -6,6 +6,7 @@ import * as meship from "meship";
 import * as meshtastic from "meshtastic";
 import * as meshtasticprotobufs from "meshtasticprotobufs";
 import * as meshcore from "meshcore";
+import * as aprs from "aprs";
 import * as websocket from "websocket";
 import * as event from "event";
 
@@ -158,6 +159,8 @@ export function setup()
     router.registerApp(meshtastic);
     meshcore.setup(config);
     router.registerApp(meshcore);
+    aprs.setup(config);
+    router.registerApp(aprs);
     
     event.setup(config);
     global.event = event;
@@ -206,6 +209,7 @@ export function setup()
         DEBUG0("Shutting down\n");
         meshtastic.shutdown();
         meshcore.shutdown();
+        aprs.shutdown();
         meship.shutdown();
         platform.shutdown();
         nodedb.shutdown();
