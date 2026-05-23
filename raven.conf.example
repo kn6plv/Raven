@@ -10,19 +10,18 @@
         "enabled": false,
         "callsign": "KJ6DZB-10",
         "channel": "APRS og==",
-        "default_group": "MeshOps",
+        "default_group": "APRSgroup1",
+        "inline_max_members": 10,
         "backend": {
-            "type": "kiss_tcp",
-            "host": "127.0.0.1",
-            "port": 8001,
-            "kiss_port": 0,
-            "tx_enabled": false,
-            "path": []
+            "type": "aprsis",
+            "host": "rotate.aprs2.net",
+            "port": 14580,
+            "tx_enabled": false
         },
         "groups": [
             {
-                "name": "MeshOps",
-                "members": [ "KJ6DZB-4" ],
+                "name": "APRSgroup1",
+                "members": [ "KJ6DZB-4", "KJ6DZB-10" ],
                 "repeat_member_messages": false,
                 "rate_limit_seconds": 20,
                 "max_members": 10
