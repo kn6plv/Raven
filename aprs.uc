@@ -20,10 +20,7 @@ let recent = {};
 let last_group_tx = {};
 export let enabled = false;
 
-function now()
-{
-    return time();
-}
+function now() { return time(); }
 
 function closeSocket()
 {
@@ -33,15 +30,8 @@ function closeSocket()
     }
 }
 
-function normcall(c)
-{
-    return uc(trim(c ?? ""));
-}
-
-function members(g)
-{
-    return g?.members ?? [];
-}
+function normcall(c) { return uc(trim(c ?? "")); }
+function members(g) { return g?.members ?? []; }
 
 function memberOf(call)
 {
@@ -68,6 +58,26 @@ function getGroup(name)
         }
     }
     return null;
+}
+
+function putGroup(name, dsts)
+{
+    let g = getGroup(name);
+    if (!g) {
+        g = {
+            name: name,
+            members: [],
+            repeat_member_messages: false,
+            rate_limit_seconds: 20,
+            max_members: cfg.inline_max_members ?? 10
+        };
+        if (!cfg.groups) {
+            cfg.groups = [];
+        }
+        push(cfg.groups, g);
+    }
+    g.members = dsts;
+    return g;
 }
 
 function callsignSsid(call)
@@ -183,19 +193,13 @@ function aprsMessage(dst, text, id)
     return `:${dst}:${text}${id ? "{" + id : ""}`;
 }
 
-function tnc2(info)
-{
-    return `${cfg.callsign}>${DEST},TCPIP*:${info}\r\n`;
-}
+function tnc2(info) { return `${cfg.callsign}>${DEST},TCPIP*:${info}\r\n`; }
 
 function parseTnc2(line)
 {
     line = trim(line ?? "");
     const m = match(line, /^([^>]+)>[^:]+:(.*)$/);
-    if (!m) {
-        return null;
-    }
-    return { from: normcall(m[1]), info: m[2] };
+    return m ? { from: normcall(m[1]), info: m[2] } : null;
 }
 
 function parseAprsMsg(line)
@@ -257,9 +261,18 @@ function backendSend(info)
     return false;
 }
 
-function sendOne(dst, text)
+function sendOne(dst, text) { return backendSend(aprsMessage(dst, text, id3())); }
+
+function sendList(list, text, except, max)
 {
-    return backendSend(aprsMessage(dst, text, id3()));
+    const count = min(length(list), max ?? 10);
+    for (let i = 0; i < count; i++) {
+        const m = normcall(list[i]);
+        if (m && m !== normcall(except)) {
+            sendOne(m, text);
+        }
+    }
+    return count > 0;
 }
 
 function sendGroup(g, text, except)
@@ -267,16 +280,7 @@ function sendGroup(g, text, except)
     if (!g) {
         return false;
     }
-    const ml = members(g);
-    const maxm = g.max_members ?? 10;
-    const count = min(length(ml), maxm);
-    for (let i = 0; i < count; i++) {
-        const m = normcall(ml[i]);
-        if (m !== normcall(except)) {
-            sendOne(m, text);
-        }
-    }
-    return true;
+    return sendList(members(g), text, except, g.max_members ?? 10);
 }
 
 function ravenMsg(fromcall, text)
@@ -284,9 +288,7 @@ function ravenMsg(fromcall, text)
     const msg = message.createMessage(node.BROADCAST, node.UNKNOWN, cfg.channel, "text_message", text, {
         transport: "aprs",
         originating_callsign: fromcall,
-        data: {
-            text_from: fromcall
-        }
+        data: { text_from: fromcall }
     });
     msg.namekey = cfg.channel;
     return msg;
@@ -308,6 +310,36 @@ function receiveLine(line)
     return ravenMsg(m.from, m.text);
 }
 
+function joinFrom(parts, start)
+{
+    let out = "";
+    for (let i = start; i < length(parts); i++) {
+        if (parts[i] !== "") {
+            out += `${out ? " " : ""}${parts[i]}`;
+        }
+    }
+    return out;
+}
+
+function parseInlineRecipients(rest)
+{
+    const parts = split(trim(rest ?? ""), " ");
+    const dsts = [];
+    let i = 0;
+    for (; i < length(parts); i++) {
+        let tok = replace(trim(parts[i]), /,$/, "");
+        if (!tok) {
+            continue;
+        }
+        if (!match(tok, /^[A-Za-z0-9]{1,6}(-[0-9]{1,2})?$/)) {
+            break;
+        }
+        push(dsts, normcall(tok));
+    }
+    const text = joinFrom(parts, i);
+    return length(dsts) && text ? { dsts: dsts, text: text } : null;
+}
+
 function parseOutboundText(text)
 {
     text = trim(text ?? "");
@@ -315,8 +347,22 @@ function parseOutboundText(text)
     if (m) {
         return { dst: normcall(m[1]), text: m[2] };
     }
+    m = match(text, /^join\s+#([^ ]+)\s+(.+)$/i);
+    if (m) {
+        const inline = parseInlineRecipients(m[2]);
+        if (inline) {
+            inline.join = true;
+            inline.group = m[1];
+            return inline;
+        }
+    }
     m = match(text, /^#([^ ]+)\s+(.+)$/);
     if (m) {
+        const inline = parseInlineRecipients(m[2]);
+        if (inline) {
+            inline.group = m[1];
+            return inline;
+        }
         return { group: m[1], text: m[2] };
     }
     return { group: cfg.default_group, text: text };
@@ -328,8 +374,9 @@ function connect()
         return;
     }
     const b = cfg.backend ?? {};
-    const host = b.host ?? "127.0.0.1";
-    const port = b.port ?? (b.type === "kiss_tcp" ? 8001 : 14580);
+    const type = b.type ?? "aprsis";
+    const host = b.host ?? (type === "aprsis" ? "rotate.aprs2.net" : "127.0.0.1");
+    const port = b.port ?? (type === "kiss_tcp" ? 8001 : 14580);
     s = socket.create(socket.AF_INET, socket.SOCK_STREAM, 0);
     if (!s || s.connect({ address: host, port: port }) === null) {
         DEBUG0("aprs: connect %s:%d failed: %s\n", host, port, socket.error());
@@ -337,14 +384,14 @@ function connect()
         return;
     }
     s.listen();
-    if (b.type === "aprsis") {
+    if (type === "aprsis") {
         const passcode = b.passcode ?? "-1";
         s.send(`user ${cfg.callsign} pass ${passcode} vers Raven 0.1\r\n`);
         if (b.filter) {
             s.send(`# filter ${b.filter}\r\n`);
         }
     }
-    DEBUG0("aprs: connected %s:%d type=%s\n", host, port, b.type);
+    DEBUG0("aprs: connected %s:%d type=%s\n", host, port, type);
 }
 
 export function setup(config)
@@ -356,19 +403,17 @@ export function setup(config)
     enabled = true;
     cfg.callsign = normcall(cfg.callsign ?? config.callsign);
     cfg.channel = cfg.channel ?? "APRS og==";
+    if (!cfg.backend) {
+        cfg.backend = {};
+    }
+    if (!cfg.backend.type) {
+        cfg.backend.type = "aprsis";
+    }
     connect();
 };
 
-export function shutdown()
-{
-    closeSocket();
-};
-
-export function handle()
-{
-    connect();
-    return s;
-};
+export function shutdown() { closeSocket(); };
+export function handle() { connect(); return s; };
 
 export function recv()
 {
@@ -413,15 +458,16 @@ export function send(msg)
     if (p.dst) {
         sendOne(p.dst, p.text);
     }
+    else if (p.dsts) {
+        if (p.join) {
+            putGroup(p.group, p.dsts);
+        }
+        sendList(p.dsts, p.text, null, cfg.inline_max_members ?? 10);
+    }
     else {
         sendGroup(getGroup(p.group), p.text, null);
     }
 };
 
-export function tick()
-{
-};
-
-export function process(msg)
-{
-};
+export function tick() {};
+export function process(msg) {};
