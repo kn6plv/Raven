@@ -1,6 +1,7 @@
 import * as meshtastic from "meshtastic";
 import * as meshcore from "meshcore";
 import * as meship from "meship";
+import * as aprs from "aprs";
 import * as node from "node";
 import * as nodedb from "nodedb";
 import * as socket from "socket";
@@ -168,6 +169,10 @@ export function tick()
     if (mc) {
         push(sockets, [ mc, socket.POLLIN, "meshcore" ]);
     }
+    const as = aprs.handle();
+    if (as) {
+        push(sockets, [ as, socket.POLLIN|socket.POLLRDHUP, "aprs" ]);
+    }
     const ph = platform.handle();
     if (ph) {
         push(sockets, [ ph, socket.POLLIN|socket.POLLRDHUP, "platform" ]);
@@ -221,6 +226,14 @@ export function tick()
                     }
                     catch (e) {
                         DEBUG0("meshcore recv: %s\n%s\n", e, e.stacktrace);
+                    }
+                    break;
+                case "aprs":
+                    try {
+                        queue(aprs.recv());
+                    }
+                    catch (e) {
+                        DEBUG0("aprs recv: %s\n%s\n", e, e.stacktrace);
                     }
                     break;
                 case "platform":
