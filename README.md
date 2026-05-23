@@ -1,9 +1,12 @@
 # Raven Mesh Messaging Platform
 
 Raven is a decentralized mesh messaging platform for AREDN&copy; with the ability to bridge messages from AREDN to other message platform.
-Currently it interoperates with Meshtastic, MeshCore, Winlink, and APRS.
+Currently it interoperates with Meshtastic, MeshCore and Winlink.
 
 Documentation can be found here https://github.com/kn6plv/Raven/wiki
+
+<img width="1024" height="573" alt="Screenshot 2026-02-25 at 8 56 21 AM" src="https://github.com/user-attachments/assets/d0f51937-e1b8-46ad-99de-da5055f8567e" />
+
 
 ## APRS bridge
 
@@ -134,4 +137,3 @@ Each group can optionally repeat received APRS messages from one group member ba
 
 When enabled, a message received from one group member is sent to the other group members, not back to the sender. Raven applies simple duplicate suppression and rate limiting to reduce loops.
 
-<img width="1024" height="573" alt="Screenshot 2026-02-25 at 8 56 21 AM" src="https://github.com/user-attachments/assets/d0f51937-e1b8-46ad-99de-da5055f8567e" />
