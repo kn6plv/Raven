@@ -185,7 +185,7 @@ export function setup(config)
     enabled = true;
 
     prefixHash1 = node.getMeshcoreHash(1);
-    twoPrefix1 = struct.pack("BB", config.meshcore.bridgehash, prefixHash1);
+    twoPrefix1 = struct.pack("BB", config.meshcore.bridgehash & 255, prefixHash1);
     if (config.meshcore.bridgehash > 255) {
         prefixHash2 = node.getMeshcoreHash(2);
         twoPrefix2 = struct.pack(">2H", config.meshcore.bridgehash, prefixHash2);
