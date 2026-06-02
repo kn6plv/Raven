@@ -22,6 +22,7 @@ import * as device from "telemetry_device";
 import * as environmental_weewx from "telemetry_environmental_weewx";
 import * as airquality_purpleair from "telemetry_airquality_purpleair";
 import * as winlink from "winlink";
+import * as gatekeeper from "gatekeeper";
 
 let bconfig;
 let config;
@@ -152,6 +153,8 @@ export function setup()
     global.platform.mergePlatformConfig(config);
 
     node.setup(config);
+    gatekeeper.setup(config);
+    router.registerApp(gatekeeper);
 
     meship.setup(config);
     router.registerApp(meship);
