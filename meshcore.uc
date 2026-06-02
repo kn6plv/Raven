@@ -77,10 +77,11 @@ const TEXT_TYPE_SIGNED = 0x02;
 let s = null;
 let prefixHash1 = null;
 let prefixHash2 = null;
-let twoPrefix1 = null;
-let twoPrefix2 = null;
+let dualPrefix1 = null;
+let dualPrefix2 = null;
 let callsign = null;
 let router = null;
+let hashsize = 1;
 
 let sharedKeys = {};
 let xPriv = {};
@@ -178,18 +179,21 @@ export function setup(config)
     if (!config.meshcore) {
         return;
     }
-    if (config.meshcore.bridgehash === null) {
-        print("Missing bridge hash - disabling MeshCore\n");
+    const bk = match(config.meshcore.bridgekey, /^(..)(..)/);
+    if (bk === null) {
+        print("Missing or bad bridge public key - disabling MeshCore\n");
         return;
+    }
+    if (config.meshcore.hashsize === 2) {
+        hashsize = 2;
     }
     enabled = true;
 
     prefixHash1 = node.getMeshcoreHash(1);
-    twoPrefix1 = struct.pack("BB", config.meshcore.bridgehash, prefixHash1);
-    if (config.meshcore.bridgehash > 255) {
-        prefixHash2 = node.getMeshcoreHash(2);
-        twoPrefix2 = struct.pack(">2H", config.meshcore.bridgehash, prefixHash2);
-    }
+    dualPrefix1 = struct.pack("BB", hex(bk[1]), prefixHash1);
+    prefixHash2 = node.getMeshcoreHash(2);
+    dualPrefix2 = struct.pack(">BBH", hex(bk[1]), hex(bk[2]), prefixHash2);
+
     callsign = config.callsign;
     router = config.router;
 
@@ -314,20 +318,16 @@ function decodePacket(pkt)
     const path = substr(pkt, offset + 1, pathlen);
     offset += pathlen + 1;
 
-    // If we know the prefix route to the bridge we can safely process the message path. If we dont then we
-    // just assume everything is okay. We will never send any direct routed packets.
-    const twoPrefix = pathtype === PAYLOAD_PATHLEN_2 ? twoPrefix2 : twoPrefix1;
-    if (twoPrefix) {
-        // For floods, we append both the bridge and ourselves to the path because we are forwarded the packet
-        // before the bridge has processed it and added itself to the path.
-        if (msg.flood) {
-            msg.path = { type: pathtype, path: twoPrefix + revPath(pathtype, path) };
-        }
-        // For direct routes, the path must equal the bridge + ourselves, again because the bridge forwards
-        // the packet before it has processed it and removed itself from the path.
-        else if (path !== twoPrefix) {
-            return null;
-        }
+    const prefix = pathtype === PAYLOAD_PATHLEN_2 ? dualPrefix2 : dualPrefix1;
+    // For floods, we append both the bridge and ourselves to the path because we are forwarded the packet
+    // before the bridge has processed it and added itself to the path.
+    if (msg.flood) {
+        msg.path = { type: pathtype, path: prefix + revPath(pathtype, path) };
+    }
+    // For direct routes, the path must equal the bridge + ourselves, again because the bridge forwards
+    // the packet before it has processed it and removed itself from the path.
+    else if (path !== prefix) {
+        return null;
     }
 
     const pkthash = crypto.sha256hash(chr(type) + (type === PAYLOAD_TYPE_TRACE ? struct.pack(">H", pathinfo & PAYLOAD_PATHLEN_MASK) : "") + substr(pkt, offset));
@@ -591,11 +591,12 @@ function makePktHeader(type, path)
     }
     else {
         // If we dont have a path, create a flood route building a new path.
-        if (prefixHash2) {
-            return struct.pack(">BBH", (PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_FLOOD, PAYLOAD_PATHLEN_2 + 1, prefixHash2);
-        }
-        else {
-            return struct.pack("BBB", (PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_FLOOD, PAYLOAD_PATHLEN_1 + 1, prefixHash1);
+        switch (hashsize) {
+            case 2:
+                return struct.pack(">BBH", (PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_FLOOD, PAYLOAD_PATHLEN_2 + 1, prefixHash2);
+            case 1:
+            default:
+                return struct.pack("BBB", (PAYLOAD_VER_1 << 6) | (type << 2) | ROUTE_TYPE_FLOOD, PAYLOAD_PATHLEN_1 + 1, prefixHash1);
         }
     }
 }
