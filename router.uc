@@ -8,6 +8,7 @@ import * as socket from "socket";
 import * as timers from "timers";
 import * as channel from "channel";
 import * as websocket from "websocket";
+import * as gatekeeper from "gatekeeper";
 
 const MAX_RECENT = 128;
 const recent = [];
@@ -144,7 +145,18 @@ export function queueId(id)
 
 export function queue(msg)
 {
-    if (msg && queueId(msg.id)) {
+    if (!msg) {
+        return;
+    }
+
+    if (gatekeeper.isEnabled() && (msg.transport === "meshtastic" || msg.transport === "meshcore")) {
+        msg = gatekeeper.filterInboundBridge(msg);
+        if (!msg) {
+            return;
+        }
+    }
+
+    if (queueId(msg.id)) {
         push(q, msg);
     }
 };
