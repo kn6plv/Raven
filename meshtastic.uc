@@ -7,6 +7,7 @@ import * as channel from "channel";
 import * as node from "node";
 import * as nodedb from "nodedb";
 import * as timers from "timers";
+import * as gatekeeper from "gatekeeper";
 
 const ADDRESS = "224.0.0.69";
 const PORT = 4403;
@@ -121,6 +122,12 @@ function decodePacket(pkt)
     msg.hop_limit = 1;
     msg.transport = "meshtastic";
     msg.originating_callsign = callsign;
+
+    if (gatekeeper.isEnabled() && msg.encrypted) {
+        DEBUG0("gatekeeper: drop encrypted Meshtastic packet from %s\n", msg.from);
+        return null;
+    }
+
     if (!msg.encrypted) {
         return decodePacketData(msg);
     }
