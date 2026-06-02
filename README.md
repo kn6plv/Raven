@@ -8,5 +8,6 @@ Documentation can be found here https://github.com/kn6plv/Raven/wiki
 ## Bridge guides
 
 - [APRS bridge](APRS.md) - APRS-IS, Xastir/YAAC-style TCP text streams, Dire Wolf KISS TCP, direct messages, groups, and group repeat mode.
+- [Strict Gatekeeper mode](STRICT_GATEKEEPER.md) - optional fail-closed filtering and gateway identification for Meshtastic/MeshCore ingress.
 
 <img width="1024" height="573" alt="Screenshot 2026-02-25 at 8 56 21 AM" src="https://github.com/user-attachments/assets/d0f51937-e1b8-46ad-99de-da5055f8567e" />
