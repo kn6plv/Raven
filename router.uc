@@ -112,22 +112,28 @@ export function process()
                 }
             }
             if (tomeshcore) {
-                try {
-                    DEBUG1("Send Meshcore: %.2J\n", msg);
-                    meshcore.send(msg);
-                }
-                catch (e) {
-                    DEBUG0("meshcore recv: %s\n", e.stacktrace);
+                // When gatekeeper is strict, only bridge text messages outbound
+                if (!gatekeeper?.isEnabled() || msg.data?.text_message) {
+                    try {
+                        DEBUG1("Send Meshcore: %.2J\n", msg);
+                        meshcore.send(msg);
+                    }
+                    catch (e) {
+                        DEBUG0("meshcore recv: %s\n", e.stacktrace);
+                    }
                 }
             }
             // Meshtastic modifies the message so much come last
             if (tomeshtastic) {
-                try {
-                    DEBUG1("Send Meshtastic: %.2J\n", msg);
-                    meshtastic.send(msg);
-                }
-                catch (e) {
-                    DEBUG0("meshtastic recv: %s\n", e.stacktrace);
+                // When gatekeeper is strict, only bridge text messages outbound
+                if (!gatekeeper?.isEnabled() || msg.data?.text_message) {
+                    try {
+                        DEBUG1("Send Meshtastic: %.2J\n", msg);
+                        meshtastic.send(msg);
+                    }
+                    catch (e) {
+                        DEBUG0("meshtastic recv: %s\n", e.stacktrace);
+                    }
                 }
             }
         }
