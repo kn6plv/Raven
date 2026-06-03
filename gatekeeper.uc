@@ -43,28 +43,28 @@ export function setup(config)
     if (strict_enabled && !gateway_callsign) {
         DEBUG0("gatekeeper: strict mode enabled but no valid gateway callsign configured\n");
     }
-}
+};
 
 export function isEnabled()
 {
     return strict_enabled;
-}
+};
 
 export function gatewayCallsign()
 {
     return gateway_callsign;
-}
+};
 
 export function senderCallsignFromNodeId(id)
 {
     const info = nodedb.getNode(id, false)?.nodeinfo;
     return norm(info?.long_name) ?? norm(info?.short_name) ?? null;
-}
+};
 
 export function senderCallsignFromTextName(name)
 {
     return norm(name);
-}
+};
 
 export function allowSenderCallsign(callsign)
 {
@@ -85,12 +85,12 @@ export function allowSenderCallsign(callsign)
         return null;
     }
     return callsign;
-}
+};
 
 export function allowSenderNode(id)
 {
     return allowSenderCallsign(senderCallsignFromNodeId(id));
-}
+};
 
 export function annotateViaGateway(msg, sender_callsign)
 {
@@ -110,7 +110,7 @@ export function annotateViaGateway(msg, sender_callsign)
     msg.data.text_from = sender_callsign;
     msg.data.text_message = `[${sender_callsign} via ${gateway_callsign}] ${msg.data.text_message}`;
     return msg;
-}
+};
 
 export function filterInboundBridge(msg)
 {
@@ -133,11 +133,11 @@ export function filterInboundBridge(msg)
         return null;
     }
     return annotateViaGateway(msg, sender);
-}
+};
 
 export function tick()
 {
-}
+};
 
 export function process(msg)
 {

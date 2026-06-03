@@ -154,6 +154,8 @@ export function setup()
 
     node.setup(config);
     gatekeeper.setup(config);
+    config._gatekeeper = gatekeeper;
+    router.setGatekeeper(gatekeeper);
     router.registerApp(gatekeeper);
 
     meship.setup(config);

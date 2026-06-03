@@ -8,12 +8,16 @@ import * as socket from "socket";
 import * as timers from "timers";
 import * as channel from "channel";
 import * as websocket from "websocket";
-import * as gatekeeper from "gatekeeper";
-
 const MAX_RECENT = 128;
 const recent = [];
 const apps = [];
 const q = [];
+let gatekeeper = null;
+
+export function setGatekeeper(gk)
+{
+    gatekeeper = gk;
+};
 
 export function registerApp(app)
 {
@@ -149,7 +153,7 @@ export function queue(msg)
         return;
     }
 
-    if (gatekeeper.isEnabled() && (msg.transport === "meshtastic" || msg.transport === "meshcore")) {
+    if (gatekeeper?.isEnabled() && (msg.transport === "meshtastic" || msg.transport === "meshcore")) {
         msg = gatekeeper.filterInboundBridge(msg);
         if (!msg) {
             return;
