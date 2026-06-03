@@ -2,6 +2,7 @@ import * as socket from "socket";
 import * as struct from "struct";
 import * as node from "node";
 import * as message from "message";
+import * as channel from "channel";
 
 const FEND  = 0xc0;
 const FESC  = 0xdb;
@@ -15,8 +16,12 @@ const DEST = "APZRVN";
 const RECONNECT_BASE_MS = 5000;
 const RECONNECT_MAX_MS = 300000;
 
+const DEFAULT_CHANNEL_NAME = "APRS-IS-Feed";
+const DEFAULT_CHANNEL_KEY = "og==";
+
 let cfg = null;
 let router = null;
+let channelKey = null;
 let s = null;
 let rxbuf = "";
 let kiss_rxbuf = "";
@@ -291,14 +296,33 @@ function sendGroup(g, text, except)
     return sendList(members(g), text, except, g.max_members ?? 10);
 }
 
+function resolveInboundChannel(fromcall)
+{
+    // Group members always land in the main APRS channel so the
+    // conversation stays visible to the whole group.
+    if (length(memberOf(fromcall)) > 0) {
+        return cfg.channel;
+    }
+    // Otherwise deliver to an existing DM channel for this callsign,
+    // falling back to the main APRS group channel.
+    if (channelKey && fromcall) {
+        const dmNamekey = `${lc(trim(fromcall))} ${channelKey}`;
+        if (channelByNameKey[dmNamekey]) {
+            return dmNamekey;
+        }
+    }
+    return cfg.channel;
+}
+
 function ravenMsg(fromcall, text)
 {
-    const msg = message.createMessage(node.BROADCAST, node.UNKNOWN, cfg.channel, "text_message", text, {
+    const target = resolveInboundChannel(fromcall);
+    const msg = message.createMessage(node.BROADCAST, node.UNKNOWN, target, "text_message", text, {
         transport: "aprs",
         originating_callsign: fromcall,
         data: { text_from: fromcall }
     });
-    msg.namekey = cfg.channel;
+    msg.namekey = target;
     return msg;
 }
 
@@ -429,7 +453,10 @@ export function setup(config)
     }
     enabled = true;
     cfg.callsign = normcall(cfg.callsign ?? config.callsign);
-    cfg.channel = cfg.channel ?? "APRS og==";
+    cfg.channel = cfg.channel ?? `${DEFAULT_CHANNEL_NAME} ${DEFAULT_CHANNEL_KEY}`;
+    channelKey = split(cfg.channel, " ", 2)[1];
+    // Ensure the feed channel is registered (aprs.setup runs before channel.setup)
+    channel.updateLocalChannels([ { namekey: cfg.channel } ]);
     router = config.router;
     if (!cfg.backend) {
         cfg.backend = {};
@@ -517,7 +544,26 @@ export function tick()
 };
 export function process(msg)
 {
-    if (node.fromMe(msg)) {
+    if (!enabled || !node.fromMe(msg) || !msg?.data?.text_message) {
+        return;
+    }
+    if (msg.namekey === cfg.channel) {
+        // Message on the main APRS channel – use normal send logic
         send(msg);
+        return;
+    }
+    // Check for DM channels sharing the APRS channel key (e.g. "kj6dzb-4 og==")
+    const parts = split(msg.namekey, " ", 2);
+    if (channelKey && parts[1] === channelKey) {
+        const dst = normcall(parts[0]);
+        if (dst) {
+            // Strip @callsign prefix when it matches the DM destination
+            let text = trim(msg.data.text_message ?? "");
+            const m = match(text, /^@([A-Za-z0-9-]+)\s+(.+)$/s);
+            if (m && normcall(m[1]) === dst) {
+                text = m[2];
+            }
+            sendOne(dst, text);
+        }
     }
 };
