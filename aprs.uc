@@ -225,7 +225,7 @@ function parseAprsMsg(line)
     if (ack) {
         return { from: p.from, ack: ack[1] };
     }
-    const mid = match(body, /^(.*)\{([A-Za-z0-9]+)$/);
+    const mid = match(body, /^(.*)\{([A-Za-z0-9]+)\}?[A-Za-z0-9]*$/);
     return { from: p.from, text: mid ? mid[1] : body, id: mid ? mid[2] : null };
 }
 
@@ -515,4 +515,9 @@ export function tick()
         }
     }
 };
-export function process(msg) {};
+export function process(msg)
+{
+    if (node.fromMe(msg)) {
+        send(msg);
+    }
+};
