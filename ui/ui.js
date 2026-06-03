@@ -735,6 +735,11 @@ function resetPost(clearContent)
         w.style.display = winlink && cstate.winlink ? null : "none";
         i.style.display = cstate.images ? null : "none";
     }
+    else if (rightSelection && rightSelection.indexOf("APRS ") === 0) {
+        t.placeholder = "@CALLSIGN message  or  #group message ...";
+        w.style.display = "none";
+        i.style.display = "none";
+    }
     else {
         t.placeholder = "Message ...";
         w.style.display = winlink && cstate.winlink ? null : "none";
