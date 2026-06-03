@@ -12,12 +12,20 @@ const PID_NO_L3 = 0xf0;
 const MAX_APRS_TEXT = 67;
 const DEST = "APZRVN";
 
+const RECONNECT_BASE_MS = 5000;
+const RECONNECT_MAX_MS = 300000;
+
 let cfg = null;
+let router = null;
 let s = null;
 let rxbuf = "";
+let kiss_rxbuf = "";
 let seq = 1;
 let recent = {};
 let last_group_tx = {};
+let reconnect_after = 0;
+let reconnect_delay = RECONNECT_BASE_MS;
+let pending_rx = [];
 export let enabled = false;
 
 function now() { return time(); }
@@ -170,17 +178,17 @@ function kissUnframe(data)
     for (let i = 0; i < length(data); i++) {
         const c = ord(data, i);
         if (c === FEND) {
-            if (length(rxbuf) > 1) {
-                push(frames, substr(rxbuf, 1));
+            if (length(kiss_rxbuf) > 1) {
+                push(frames, substr(kiss_rxbuf, 1));
             }
-            rxbuf = "";
+            kiss_rxbuf = "";
         }
         else if (c === FESC && i + 1 < length(data)) {
             const n = ord(data, ++i);
-            rxbuf += struct.pack("B", n === TFEND ? FEND : n === TFESC ? FESC : n);
+            kiss_rxbuf += struct.pack("B", n === TFEND ? FEND : n === TFESC ? FESC : n);
         }
         else {
-            rxbuf += substr(data, i, 1);
+            kiss_rxbuf += substr(data, i, 1);
         }
     }
     return frames;
@@ -294,12 +302,21 @@ function ravenMsg(fromcall, text)
     return msg;
 }
 
+function sendAck(to, id)
+{
+    if (id) {
+        backendSend(aprsMessage(to, `ack${id}`, null));
+    }
+}
+
 function receiveLine(line)
 {
     const m = parseAprsMsg(line);
     if (!m || !m.text) {
         return null;
     }
+    // ACK the incoming message so the sender knows we received it
+    sendAck(m.from, m.id);
     const groups = memberOf(m.from);
     for (let i = 0; i < length(groups); i++) {
         const g = groups[i];
@@ -373,16 +390,26 @@ function connect()
     if (!enabled || s) {
         return;
     }
+    // Exponential backoff: skip connect attempts until the backoff timer expires
+    const t = now() * 1000;
+    if (reconnect_after > 0 && t < reconnect_after) {
+        return;
+    }
     const b = cfg.backend ?? {};
     const type = b.type ?? "aprsis";
     const host = b.host ?? (type === "aprsis" ? "rotate.aprs2.net" : "127.0.0.1");
     const port = b.port ?? (type === "kiss_tcp" ? 8001 : 14580);
     s = socket.create(socket.AF_INET, socket.SOCK_STREAM, 0);
     if (!s || s.connect({ address: host, port: port }) === null) {
-        DEBUG0("aprs: connect %s:%d failed: %s\n", host, port, socket.error());
+        DEBUG0("aprs: connect %s:%d failed (retry in %ds): %s\n", host, port, reconnect_delay / 1000, socket.error());
         closeSocket();
+        reconnect_after = t + reconnect_delay;
+        reconnect_delay = min(reconnect_delay * 2, RECONNECT_MAX_MS);
         return;
     }
+    // Connected — reset backoff
+    reconnect_delay = RECONNECT_BASE_MS;
+    reconnect_after = 0;
     s.listen();
     if (type === "aprsis") {
         const passcode = b.passcode ?? "-1";
@@ -403,6 +430,7 @@ export function setup(config)
     enabled = true;
     cfg.callsign = normcall(cfg.callsign ?? config.callsign);
     cfg.channel = cfg.channel ?? "APRS og==";
+    router = config.router;
     if (!cfg.backend) {
         cfg.backend = {};
     }
@@ -413,10 +441,18 @@ export function setup(config)
 };
 
 export function shutdown() { closeSocket(); };
-export function handle() { connect(); return s; };
+export function handle()
+{
+    connect();
+    return s;
+};
 
 export function recv()
 {
+    // Return buffered messages from a previous read first
+    if (length(pending_rx) > 0) {
+        return shift(pending_rx);
+    }
     const data = s.recv(2048);
     if (!data) {
         closeSocket();
@@ -430,7 +466,7 @@ export function recv()
                 const line = parseAx25(substr(frames[i], 1));
                 const msg = receiveLine(line);
                 if (msg) {
-                    return msg;
+                    push(pending_rx, msg);
                 }
             }
         }
@@ -442,11 +478,11 @@ export function recv()
         for (let i = 0; i < length(lines); i++) {
             const msg = receiveLine(lines[i]);
             if (msg) {
-                return msg;
+                push(pending_rx, msg);
             }
         }
     }
-    return null;
+    return length(pending_rx) > 0 ? shift(pending_rx) : null;
 };
 
 export function send(msg)
@@ -469,5 +505,14 @@ export function send(msg)
     }
 };
 
-export function tick() {};
+export function tick()
+{
+    // Drain any buffered messages from a previous multi-message read
+    while (length(pending_rx) > 0) {
+        const msg = shift(pending_rx);
+        if (msg) {
+            router.queue(msg);
+        }
+    }
+};
 export function process(msg) {};
