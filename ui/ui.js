@@ -137,11 +137,11 @@ function makeShortName(longname)
 }
 
 // Auto-scale font size so text fits inside a circle of the given diameter.
-// Uses 70% of diameter as usable width (inscribed region) and ~0.6em average char width.
+// Uses 85% of diameter as usable width and ~0.6em average char width.
 function circleFontSize(text, diameter)
 {
     const maxFont = diameter * 0.28;           // default max ≈ 14px for 50px circle
-    const usable  = diameter * 0.70;           // usable horizontal span inside circle
+    const usable  = diameter * 0.85;           // usable horizontal span inside circle
     const fitted  = usable / (text.length * 0.6);
     return Math.min(maxFont, Math.max(8, Math.round(fitted))) + "px";
 }
