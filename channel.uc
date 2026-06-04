@@ -149,6 +149,9 @@ function setLocalChannel(config)
     if (config.telemetry !== null) {
         chan.telemetry = config.telemetry;
     }
+    if (config.backend !== null && config.backend !== undefined) {
+        chan.backend = config.backend;
+    }
     localChannelByNameKey[namekey] = chan;
     return true;
 };

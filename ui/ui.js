@@ -13,6 +13,7 @@ let dropSelection;
 let replyid;
 let activeFilter;
 let winlink = null;
+let aprsBackends = [];
 let activityTimeout;
 let catchupTimeout;
 let focusid = null;
@@ -324,10 +325,27 @@ function htmlCommand(reply)
     </div>`;
 }
 
+function backendOptions(selected)
+{
+    if (!aprsBackends || aprsBackends.length === 0) {
+        return '';
+    }
+    let opts = `<option value=""${!selected ? ' selected' : ''}>(default)</option>`;
+    for (let i = 0; i < aprsBackends.length; i++) {
+        const b = aprsBackends[i];
+        opts += `<option value="${b}"${selected === b ? ' selected' : ''}>${b}</option>`;
+    }
+    return opts;
+}
+
 function htmlChannelConfig()
 {
+    const hasBackends = aprsBackends && aprsBackends.length > 0;
     const body = echannels.map((e, i) => {
         const ne = echannels[i + 1] || {};
+        const backendSelect = hasBackends
+            ? `<select onchange="typeChannelBackend(${i}, event.target.value)">${backendOptions(e.backend)}</select>`
+            : '';
         return `<form class="c">
             <input value="${e.meshtastic ? "Meshtastic" : e.name}" oninput="typeChannelName(${i}, event.target.value)" required minlength="1" maxlength="11" size="11" placeholder="Name" ${e.aredn || e.meshtastic || e.meshcore ? "disabled" : ""} pattern="[^ ]+">
             <input value="${e.meshtastic ? e.name : toDisplayKey(e.key)}" oninput="typeChannelKey(${i}, event.target)" required minlength="4" maxlength="43" size="43" placeholder="ID or Key" ${e.aredn || e.meshtastic || e.meshcore || (e.name[0] === "#" || e.name[0] === "%") ? "disabled" : ""}>
@@ -355,6 +373,7 @@ function htmlChannelConfig()
                 <option disabled>-- MeshCore --</option>
                 <option>Primary</option>
             </select>
+            ${backendSelect}
             <button onclick="rmChannel(${i})" ${e.aredn ? "disabled" : ""}>-</button>
             <button onclick="addChannel(${i})">+</button>
         </form>`;
@@ -369,6 +388,8 @@ function htmlChannelConfig()
                 <div>Notify</div>
                 <div>Images</div>
                 <div>Winlink</div>
+                <div></div>
+                ${hasBackends ? '<div>Backend</div>' : ''}
             </div>
             ${body}
         </div>
@@ -492,6 +513,9 @@ function updateChannels(msg)
 {
     if (msg) {
         channels = msg.channels;
+        if (msg.aprs_backends) {
+            aprsBackends = msg.aprs_backends;
+        }
     }
     I("channels").innerHTML = channels.map(c => htmlChannel(c)).join("");
     updateTitle();
@@ -872,7 +896,7 @@ function downloadImage()
 
 function addChannel(idx)
 {
-    echannels.splice(idx + 1, 0, { name: "", key: "og==", max: 100, badge: true, images: true, telemetry: false, winlink: false });
+    echannels.splice(idx + 1, 0, { name: "", key: "og==", max: 100, badge: true, images: true, telemetry: false, winlink: false, backend: "" });
     I("texts").innerHTML = htmlChannelConfig();
 }
 
@@ -966,6 +990,11 @@ function typeChannelWinlink(idx, value)
     echannels[idx].winlink = value;
 }
 
+function typeChannelBackend(idx, value)
+{
+    echannels[idx].backend = value;
+}
+
 function genChannelKey(idx, value)
 {
     function rand() {
@@ -1045,13 +1074,14 @@ function doneChannels()
             if (name.length >= 1 && key && e.max >= 10 && e.max <= 1000) {
                 const namekey = `${name} ${key}`;
                 const channel = getChannel(namekey) || { meshtastic: false, state: { count: 0, cursor: null, max: 100, badge: true, images: true } };
-                channelnames.push({ namekey: namekey, max: e.max, badge: e.badge, images: e.images, telemetry: e.telemetry, winlink: e.winlink });
+                channelnames.push({ namekey: namekey, max: e.max, badge: e.badge, images: e.images, telemetry: e.telemetry, winlink: e.winlink, backend: e.backend || "" });
                 channel.state.max = e.max;
                 channel.state.badge = e.badge;
                 channel.state.images = e.images;
                 channel.state.winlink = e.winlink;
                 channel.telemetry = e.telemetry;
-                nchannels.push({ namekey: namekey, telemetry: channel.telemetry, meshtastic: channel.meshtastic, state: channel.state });
+                channel.backend = e.backend || "";
+                nchannels.push({ namekey: namekey, telemetry: channel.telemetry, meshtastic: channel.meshtastic, backend: channel.backend, state: channel.state });
             }
         }
         catch (_) {
@@ -1186,7 +1216,8 @@ function showNamekey(namekey)
                     badge: c.state.badge,
                     images: useImage(c.namekey),
                     telemetry: c.telemetry,
-                    winlink: c.state.winlink
+                    winlink: c.state.winlink,
+                    backend: c.backend || ""
                 });
             });
             I("texts").innerHTML = htmlChannelConfig();

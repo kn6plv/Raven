@@ -12,11 +12,13 @@
         "channel": "APRS og==",
         "default_group": "APRSgroup1",
         "inline_max_members": 10,
-        "backend": {
-            "type": "aprsis",
-            "host": "rotate.aprs2.net",
-            "port": 14580,
-            "tx_enabled": false
+        "backends": {
+            "aprsis1": {
+                "type": "aprsis",
+                "host": "rotate.aprs2.net",
+                "port": 14580,
+                "tx_enabled": false
+            }
         },
         "groups": [
             {
@@ -41,7 +43,7 @@
     "messages": {},
     "channels": [
         { "namekey": "AREDN og==", "telemetry": false },
-        { "namekey": "APRS og==", "telemetry": false },
+        { "namekey": "APRS og==", "telemetry": false, "backend": "aprsis1" },
         { "namekey": "LongFast AQ==", "telemetry": true, "meshtastic": true }
     ],
     "telemetry": {

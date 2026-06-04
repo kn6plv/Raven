@@ -9,6 +9,7 @@ import * as textstore from "textstore";
 import * as router from "router";
 import * as winlink from "winlink";
 import * as commands from "commands";
+import * as aprs from "aprs";
 
 const MAXNODES = 1000;
 const MAXNODESSAFARI = 400;
@@ -225,9 +226,9 @@ export function tick()
                 case "channels":
                 {
                     const channels = map(channel.getAllLocalChannels(), c => {
-                        return { namekey: c.namekey, meshtastic: channel.isMeshtasticPreset(c.namekey), meshcore: channel.isMeshcorePreset(c.namekey), aredn: channel.isAREDNPreset(c.namekey), winlink: c.winlink, telemetry: c.telemetry, state: textmessage.state(c.namekey) };
+                        return { namekey: c.namekey, meshtastic: channel.isMeshtasticPreset(c.namekey), meshcore: channel.isMeshcorePreset(c.namekey), aredn: channel.isAREDNPreset(c.namekey), winlink: c.winlink, telemetry: c.telemetry, backend: c.backend ?? "", state: textmessage.state(c.namekey) };
                     });
-                    send({ event: msg.cmd, channels: channels });
+                    send({ event: msg.cmd, channels: channels, aprs_backends: aprs.enabled ? aprs.getBackendNames() : [] });
                     break;
                 }
                 case "newchannels":
@@ -238,6 +239,12 @@ export function tick()
                         c.namekey = `${substr(join("", slice(n, 0, -1)), 0, 13)} ${n[-1]}`;
                     }
                     const nochannels = channel.updateLocalChannels(msg.channels);
+                    // Update APRS channel→backend bindings
+                    if (aprs.enabled) {
+                        for (let i = 0; i < length(msg.channels); i++) {
+                            aprs.updateChannelBackend(msg.channels[i].namekey, msg.channels[i].backend);
+                        }
+                    }
                     textmessage.updateSettings(msg.channels);
                     notify({ cmd: "channels" });
                     platform.publish(node.getInfo(), channel.getAllLocalChannels());

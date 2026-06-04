@@ -751,6 +751,10 @@ a
     width: 44px;
     justify-content: center;
 }
+.config .b .ct div:nth-child(8)
+{
+    width: 120px;
+}
 .config .b .c
 {
     padding-left: 10px;

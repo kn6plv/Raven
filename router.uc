@@ -191,9 +191,11 @@ export function tick()
     if (mc) {
         push(sockets, [ mc, socket.POLLIN, "meshcore" ]);
     }
-    const as = aprs.handle();
-    if (as) {
-        push(sockets, [ as, socket.POLLIN|socket.POLLRDHUP, "aprs" ]);
+    const aprsh = aprs.handle();
+    if (aprsh) {
+        for (let i = 0; i < length(aprsh); i++) {
+            push(sockets, [ aprsh[i].socket, socket.POLLIN|socket.POLLRDHUP, `aprs:${aprsh[i].name}` ]);
+        }
     }
     const ph = platform.handle();
     if (ph) {
@@ -250,17 +252,24 @@ export function tick()
                         DEBUG0("meshcore recv: %s\n%s\n", e, e.stacktrace);
                     }
                     break;
-                case "aprs":
-                    try {
-                        queue(aprs.recv());
-                    }
-                    catch (e) {
-                        DEBUG0("aprs recv: %s\n%s\n", e, e.stacktrace);
-                    }
-                    break;
                 case "platform":
                 {
                     platform.handleChanges();
+                    break;
+                }
+                default:
+                {
+                    // Handle aprs:backendName tags
+                    const tag = v[i][2];
+                    if (tag && substr(tag, 0, 5) === "aprs:") {
+                        const backendName = substr(tag, 5);
+                        try {
+                            queue(aprs.recv(backendName));
+                        }
+                        catch (e) {
+                            DEBUG0("aprs[%s] recv: %s\n%s\n", backendName, e, e.stacktrace);
+                        }
+                    }
                     break;
                 }
             }

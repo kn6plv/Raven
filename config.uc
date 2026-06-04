@@ -23,6 +23,7 @@ import * as environmental_weewx from "telemetry_environmental_weewx";
 import * as airquality_purpleair from "telemetry_airquality_purpleair";
 import * as winlink from "winlink";
 import * as gatekeeper from "gatekeeper";
+import * as groups from "groups";
 
 let bconfig;
 let config;
@@ -51,6 +52,9 @@ function update(option)
                 const nchannel = { namekey: channels[i].namekey };
                 if (channels[i].telemetry) {
                     nchannel.telemetry = true;
+                }
+                if (channels[i].backend) {
+                    nchannel.backend = channels[i].backend;
                 }
                 push(nchannels, nchannel);
             }
@@ -157,6 +161,9 @@ export function setup()
     config._gatekeeper = gatekeeper;
     router.setGatekeeper(gatekeeper);
     router.registerApp(gatekeeper);
+
+    groups.setup(config);
+    router.registerApp(groups);
 
     meship.setup(config);
     router.registerApp(meship);

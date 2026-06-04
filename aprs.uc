@@ -3,6 +3,7 @@ import * as struct from "struct";
 import * as node from "node";
 import * as message from "message";
 import * as channel from "channel";
+import * as groups from "groups";
 
 const FEND  = 0xc0;
 const FESC  = 0xdb;
@@ -22,76 +23,48 @@ const DEFAULT_CHANNEL_KEY = "og==";
 let cfg = null;
 let router = null;
 let channelKey = null;
-let s = null;
-let rxbuf = "";
-let kiss_rxbuf = "";
 let seq = 1;
-let recent = {};
-let last_group_tx = {};
-let reconnect_after = 0;
-let reconnect_delay = RECONNECT_BASE_MS;
-let pending_rx = [];
 export let enabled = false;
+
+// --- Multi-backend registry ---
+// Each backend instance: { config, socket, rxbuf, kiss_rxbuf, reconnect_after, reconnect_delay, pending_rx }
+const backends = {};
+let defaultBackendName = null;
+
+// Channel → backend name mapping (namekey → backendName)
+const channelBackendMap = {};
+
+function createBackendInstance(name, bcfg)
+{
+    return {
+        name: name,
+        config: bcfg,
+        socket: null,
+        rxbuf: "",
+        kiss_rxbuf: "",
+        reconnect_after: 0,
+        reconnect_delay: RECONNECT_BASE_MS,
+        pending_rx: []
+    };
+}
+
+function closeBackendSocket(inst)
+{
+    if (inst.socket) {
+        inst.socket.close();
+        inst.socket = null;
+    }
+}
+
+// --- Utility functions ---
 
 function now() { return time(); }
 
-function closeSocket()
-{
-    if (s) {
-        s.close();
-        s = null;
-    }
-}
-
-function normcall(c) { return uc(trim(c ?? "")); }
+// Delegate to groups.uc for group management
+function normcall(c) { return groups.normcall(c); }
 function members(g) { return g?.members ?? []; }
 
-function memberOf(call)
-{
-    const out = [];
-    call = normcall(call);
-    for (let i = 0; i < length(cfg.groups ?? []); i++) {
-        const g = cfg.groups[i];
-        for (let j = 0; j < length(members(g)); j++) {
-            if (normcall(members(g)[j]) === call) {
-                push(out, g);
-                break;
-            }
-        }
-    }
-    return out;
-}
-
-function getGroup(name)
-{
-    name = lc(trim(name ?? ""));
-    for (let i = 0; i < length(cfg.groups ?? []); i++) {
-        if (lc(cfg.groups[i].name) === name) {
-            return cfg.groups[i];
-        }
-    }
-    return null;
-}
-
-function putGroup(name, dsts)
-{
-    let g = getGroup(name);
-    if (!g) {
-        g = {
-            name: name,
-            members: [],
-            repeat_member_messages: false,
-            rate_limit_seconds: 20,
-            max_members: cfg.inline_max_members ?? 10
-        };
-        if (!cfg.groups) {
-            cfg.groups = [];
-        }
-        push(cfg.groups, g);
-    }
-    g.members = dsts;
-    return g;
-}
+// --- AX.25 / KISS helpers (unchanged) ---
 
 function callsignSsid(call)
 {
@@ -124,9 +97,9 @@ function ax25Unaddr(frame, off)
     return ssid ? `${call}-${ssid}` : call;
 }
 
-function makeAx25(info)
+function makeAx25(inst, info)
 {
-    const path = cfg.backend?.path ?? [];
+    const path = inst.config?.path ?? [];
     let out = ax25Addr(DEST, false) + ax25Addr(cfg.callsign, length(path) === 0);
     for (let i = 0; i < length(path); i++) {
         out += ax25Addr(path[i], i === length(path) - 1);
@@ -171,33 +144,35 @@ function kissEscape(data)
     return out;
 }
 
-function kissFrame(ax25)
+function kissFrame(inst, ax25)
 {
-    const port = (cfg.backend?.kiss_port ?? 0) & 15;
+    const port = (inst.config?.kiss_port ?? 0) & 15;
     return struct.pack("2B", FEND, port << 4) + kissEscape(ax25) + struct.pack("B", FEND);
 }
 
-function kissUnframe(data)
+function kissUnframe(inst, data)
 {
     const frames = [];
     for (let i = 0; i < length(data); i++) {
         const c = ord(data, i);
         if (c === FEND) {
-            if (length(kiss_rxbuf) > 1) {
-                push(frames, substr(kiss_rxbuf, 1));
+            if (length(inst.kiss_rxbuf) > 1) {
+                push(frames, substr(inst.kiss_rxbuf, 1));
             }
-            kiss_rxbuf = "";
+            inst.kiss_rxbuf = "";
         }
         else if (c === FESC && i + 1 < length(data)) {
             const n = ord(data, ++i);
-            kiss_rxbuf += struct.pack("B", n === TFEND ? FEND : n === TFESC ? FESC : n);
+            inst.kiss_rxbuf += struct.pack("B", n === TFEND ? FEND : n === TFESC ? FESC : n);
         }
         else {
-            kiss_rxbuf += substr(data, i, 1);
+            inst.kiss_rxbuf += substr(data, i, 1);
         }
     }
     return frames;
 }
+
+// --- Message formatting ---
 
 function aprsMessage(dst, text, id)
 {
@@ -242,69 +217,127 @@ function id3()
 
 function canRepeat(g, src, text, id)
 {
-    const key = `${g.name}:${src}:${text}:${id ?? ""}`;
-    if (recent[key] && now() - recent[key] < 1800) {
-        return false;
-    }
-    recent[key] = now();
-    const minsec = g.rate_limit_seconds ?? 20;
-    if (last_group_tx[g.name] && now() - last_group_tx[g.name] < minsec) {
-        return false;
-    }
-    last_group_tx[g.name] = now();
-    return true;
+    return groups.canRepeat(g, src, text, id);
 }
 
-function backendSend(info)
+// --- Backend resolution ---
+
+// Resolve which backend name to use for a given namekey
+function resolveBackendName(namekey)
 {
-    if (!s || !cfg.backend?.tx_enabled) {
+    if (namekey && channelBackendMap[namekey]) {
+        return channelBackendMap[namekey];
+    }
+    return defaultBackendName;
+}
+
+// Resolve which backend name to use for a group (group.backend > channel backend > default)
+function resolveGroupBackendName(g, namekey)
+{
+    if (g?.backend && backends[g.backend]) {
+        return g.backend;
+    }
+    return resolveBackendName(namekey);
+}
+
+function getBackendInstance(name)
+{
+    return backends[name ?? defaultBackendName];
+}
+
+// --- Multi-backend send ---
+
+function backendSendTo(inst, info)
+{
+    if (!inst?.socket || !inst.config?.tx_enabled) {
         return false;
     }
-    switch (cfg.backend?.type) {
+    switch (inst.config?.type) {
         case "kiss_tcp":
-            s.send(kissFrame(makeAx25(info)));
+            inst.socket.send(kissFrame(inst, makeAx25(inst, info)));
             return true;
         case "aprsis":
         case "xastir":
         case "yaac":
         case "tcp_text":
-            s.send(tnc2(info));
+            inst.socket.send(tnc2(info));
             return true;
     }
     return false;
 }
 
-function sendOne(dst, text) { return backendSend(aprsMessage(dst, text, id3())); }
+function backendSend(backendName, info)
+{
+    const inst = getBackendInstance(backendName);
+    return backendSendTo(inst, info);
+}
 
-function sendList(list, text, except, max)
+function sendOne(backendName, dst, text) { return backendSend(backendName, aprsMessage(dst, text, id3())); }
+
+function sendList(backendName, list, text, except, max)
 {
     const count = min(length(list), max ?? 10);
     for (let i = 0; i < count; i++) {
         const m = normcall(list[i]);
         if (m && m !== normcall(except)) {
-            sendOne(m, text);
+            sendOne(backendName, m, text);
         }
     }
     return count > 0;
 }
 
-function sendGroup(g, text, except)
+function sendGroup(g, text, except, namekey)
 {
     if (!g) {
         return false;
     }
-    return sendList(members(g), text, except, g.max_members ?? 10);
+    const bn = resolveGroupBackendName(g, namekey);
+    return sendList(bn, members(g), text, except, g.max_members ?? 10);
 }
 
-function resolveInboundChannel(fromcall)
+// --- Inbound channel resolution ---
+// Each backend can have a default channel; group members always land on the main APRS channel.
+
+function resolveInboundChannel(fromcall, backendName)
 {
-    // Group members always land in the main APRS channel so the
-    // conversation stays visible to the whole group.
-    if (length(memberOf(fromcall)) > 0) {
+    // Check if sender is in any APRS group with a dedicated channel
+    const memberGroups = groups.memberOf(fromcall);
+    if (length(memberGroups) > 0) {
+        for (let i = 0; i < length(memberGroups); i++) {
+            const g = memberGroups[i];
+            const baseName = substr(g.name, 0, 1) === "#" || substr(g.name, 0, 1) === "%"
+                ? substr(g.name, 1) : g.name;
+            // Check for %GroupName og== channel (APRS groups are AREDN-only)
+            const arednNamekey = `%${baseName} og==`;
+            if (channel.getLocalChannelByNameKey(arednNamekey)) {
+                return arednNamekey;
+            }
+            // Check for #GroupName channel
+            const hashNamekey = `#${baseName}`;
+            const allLocal = channel.getAllLocalChannels();
+            for (let j = 0; j < length(allLocal); j++) {
+                if (index(allLocal[j].namekey, hashNamekey) === 0) {
+                    return allLocal[j].namekey;
+                }
+            }
+        }
+        // Fall back to main APRS channel for group members without a dedicated channel
         return cfg.channel;
     }
-    // Otherwise deliver to an existing DM channel for this callsign,
-    // falling back to the main APRS group channel.
+    // Find the first channel bound to this backend
+    for (let nk in channelBackendMap) {
+        if (channelBackendMap[nk] === backendName) {
+            // Check for DM channel
+            if (channelKey && fromcall) {
+                const dmNamekey = `${lc(trim(fromcall))} ${channelKey}`;
+                if (channelByNameKey[dmNamekey]) {
+                    return dmNamekey;
+                }
+            }
+            return nk;
+        }
+    }
+    // Fallback: deliver to an existing DM channel or the main APRS channel
     if (channelKey && fromcall) {
         const dmNamekey = `${lc(trim(fromcall))} ${channelKey}`;
         if (channelByNameKey[dmNamekey]) {
@@ -314,9 +347,9 @@ function resolveInboundChannel(fromcall)
     return cfg.channel;
 }
 
-function ravenMsg(fromcall, text)
+function ravenMsg(fromcall, text, backendName)
 {
-    const target = resolveInboundChannel(fromcall);
+    const target = resolveInboundChannel(fromcall, backendName);
     const msg = message.createMessage(node.BROADCAST, node.UNKNOWN, target, "text_message", text, {
         transport: "aprs",
         originating_callsign: fromcall,
@@ -326,30 +359,31 @@ function ravenMsg(fromcall, text)
     return msg;
 }
 
-function sendAck(to, id)
+function sendAck(backendName, to, id)
 {
     if (id) {
-        backendSend(aprsMessage(to, `ack${id}`, null));
+        backendSend(backendName, aprsMessage(to, `ack${id}`, null));
     }
 }
 
-function receiveLine(line)
+function receiveLine(line, backendName)
 {
     const m = parseAprsMsg(line);
     if (!m || !m.text) {
         return null;
     }
-    // ACK the incoming message so the sender knows we received it
-    sendAck(m.from, m.id);
-    const groups = memberOf(m.from);
-    for (let i = 0; i < length(groups); i++) {
-        const g = groups[i];
+    sendAck(backendName, m.from, m.id);
+    const mgroups = groups.memberOf(m.from);
+    for (let i = 0; i < length(mgroups); i++) {
+        const g = mgroups[i];
         if (g.repeat_member_messages && canRepeat(g, m.from, m.text, m.id)) {
-            sendGroup(g, `[${m.from}] ${m.text}`, m.from);
+            sendGroup(g, `[${m.from}] ${m.text}`, m.from, null);
         }
     }
-    return ravenMsg(m.from, m.text);
+    return ravenMsg(m.from, m.text, backendName);
 }
+
+// --- Outbound text parsing ---
 
 function joinFrom(parts, start)
 {
@@ -388,6 +422,17 @@ function parseOutboundText(text)
     if (m) {
         return { dst: normcall(m[1]), text: m[2] };
     }
+    // join #groupname [backend=NAME] CALL1 CALL2 message text
+    m = match(text, /^join\s+#([^ ]+)\s+backend=([^ ]+)\s+(.+)$/i);
+    if (m) {
+        const inline = parseInlineRecipients(m[3]);
+        if (inline) {
+            inline.join = true;
+            inline.group = m[1];
+            inline.backend = m[2];
+            return inline;
+        }
+    }
     m = match(text, /^join\s+#([^ ]+)\s+(.+)$/i);
     if (m) {
         const inline = parseInlineRecipients(m[2]);
@@ -409,41 +454,80 @@ function parseOutboundText(text)
     return { group: cfg.default_group, text: text };
 }
 
-function connect()
+// --- Per-backend connect / recv ---
+
+function connectBackend(name, inst)
 {
-    if (!enabled || s) {
+    if (!enabled || inst.socket) {
         return;
     }
-    // Exponential backoff: skip connect attempts until the backoff timer expires
     const t = now() * 1000;
-    if (reconnect_after > 0 && t < reconnect_after) {
+    if (inst.reconnect_after > 0 && t < inst.reconnect_after) {
         return;
     }
-    const b = cfg.backend ?? {};
-    const type = b.type ?? "aprsis";
-    const host = b.host ?? (type === "aprsis" ? "rotate.aprs2.net" : "127.0.0.1");
-    const port = b.port ?? (type === "kiss_tcp" ? 8001 : 14580);
-    s = socket.create(socket.AF_INET, socket.SOCK_STREAM, 0);
-    if (!s || s.connect({ address: host, port: port }) === null) {
-        DEBUG0("aprs: connect %s:%d failed (retry in %ds): %s\n", host, port, reconnect_delay / 1000, socket.error());
-        closeSocket();
-        reconnect_after = t + reconnect_delay;
-        reconnect_delay = min(reconnect_delay * 2, RECONNECT_MAX_MS);
+    const b = inst.config ?? {};
+    const btype = b.type ?? "aprsis";
+    const host = b.host ?? (btype === "aprsis" ? "rotate.aprs2.net" : "127.0.0.1");
+    const port = b.port ?? (btype === "kiss_tcp" ? 8001 : 14580);
+    inst.socket = socket.create(socket.AF_INET, socket.SOCK_STREAM, 0);
+    if (!inst.socket || inst.socket.connect({ address: host, port: port }) === null) {
+        DEBUG0("aprs[%s]: connect %s:%d failed (retry in %ds): %s\n", name, host, port, inst.reconnect_delay / 1000, socket.error());
+        closeBackendSocket(inst);
+        inst.reconnect_after = t + inst.reconnect_delay;
+        inst.reconnect_delay = min(inst.reconnect_delay * 2, RECONNECT_MAX_MS);
         return;
     }
-    // Connected — reset backoff
-    reconnect_delay = RECONNECT_BASE_MS;
-    reconnect_after = 0;
-    s.listen();
-    if (type === "aprsis") {
+    inst.reconnect_delay = RECONNECT_BASE_MS;
+    inst.reconnect_after = 0;
+    inst.socket.listen();
+    if (btype === "aprsis") {
         const passcode = b.passcode ?? "-1";
-        s.send(`user ${cfg.callsign} pass ${passcode} vers Raven 0.1\r\n`);
+        inst.socket.send(`user ${cfg.callsign} pass ${passcode} vers Raven 0.1\r\n`);
         if (b.filter) {
-            s.send(`# filter ${b.filter}\r\n`);
+            inst.socket.send(`# filter ${b.filter}\r\n`);
         }
     }
-    DEBUG0("aprs: connected %s:%d type=%s\n", host, port, type);
+    DEBUG0("aprs[%s]: connected %s:%d type=%s\n", name, host, port, btype);
 }
+
+function recvFromBackend(inst)
+{
+    if (length(inst.pending_rx) > 0) {
+        return shift(inst.pending_rx);
+    }
+    const data = inst.socket.recv(2048);
+    if (!data) {
+        closeBackendSocket(inst);
+        return null;
+    }
+    if (inst.config?.type === "kiss_tcp") {
+        const frames = kissUnframe(inst, data);
+        for (let i = 0; i < length(frames); i++) {
+            const cmd = ord(frames[i], 0) & 0x0f;
+            if (cmd === 0) {
+                const line = parseAx25(substr(frames[i], 1));
+                const msg = receiveLine(line, inst.name);
+                if (msg) {
+                    push(inst.pending_rx, msg);
+                }
+            }
+        }
+    }
+    else {
+        inst.rxbuf += data;
+        const lines = split(inst.rxbuf, "\n");
+        inst.rxbuf = pop(lines);
+        for (let i = 0; i < length(lines); i++) {
+            const msg = receiveLine(lines[i], inst.name);
+            if (msg) {
+                push(inst.pending_rx, msg);
+            }
+        }
+    }
+    return length(inst.pending_rx) > 0 ? shift(inst.pending_rx) : null;
+}
+
+// --- Public API ---
 
 export function setup(config)
 {
@@ -455,115 +539,180 @@ export function setup(config)
     cfg.callsign = normcall(cfg.callsign ?? config.callsign);
     cfg.channel = cfg.channel ?? `${DEFAULT_CHANNEL_NAME} ${DEFAULT_CHANNEL_KEY}`;
     channelKey = split(cfg.channel, " ", 2)[1];
-    // Ensure the feed channel is registered (aprs.setup runs before channel.setup)
     channel.updateLocalChannels([ { namekey: cfg.channel } ]);
     router = config.router;
-    if (!cfg.backend) {
-        cfg.backend = {};
+
+    // --- Initialize backends ---
+    // Backward compat: single "backend" → backends.default
+    let backendsCfg = cfg.backends;
+    if (!backendsCfg) {
+        backendsCfg = {};
+        if (cfg.backend) {
+            backendsCfg["default"] = cfg.backend;
+        }
+        else {
+            backendsCfg["default"] = { type: "aprsis" };
+        }
     }
-    if (!cfg.backend.type) {
-        cfg.backend.type = "aprsis";
+    // Pick the first backend as default
+    let firstName = null;
+    for (let name in backendsCfg) {
+        backends[name] = createBackendInstance(name, backendsCfg[name]);
+        if (!firstName) {
+            firstName = name;
+        }
     }
-    connect();
+    defaultBackendName = firstName;
+
+    // Build channel→backend map from config channels
+    if (config.channels) {
+        for (let i = 0; i < length(config.channels); i++) {
+            const ch = config.channels[i];
+            if (ch.backend && backends[ch.backend]) {
+                channelBackendMap[ch.namekey] = ch.backend;
+            }
+        }
+    }
+    // Also bind the main APRS channel to default if not already bound
+    if (!channelBackendMap[cfg.channel]) {
+        channelBackendMap[cfg.channel] = defaultBackendName;
+    }
+
+    // Connect all backends
+    for (let name in backends) {
+        connectBackend(name, backends[name]);
+    }
 };
 
-export function shutdown() { closeSocket(); };
+export function shutdown()
+{
+    for (let name in backends) {
+        closeBackendSocket(backends[name]);
+    }
+};
+
+// Returns array of { socket, name } for router to poll
 export function handle()
 {
-    connect();
-    return s;
+    const handles = [];
+    for (let name in backends) {
+        const inst = backends[name];
+        connectBackend(name, inst);
+        if (inst.socket) {
+            push(handles, { socket: inst.socket, name: name });
+        }
+    }
+    return length(handles) > 0 ? handles : null;
 };
 
-export function recv()
+// Receive from a specific backend by name
+export function recv(backendName)
 {
-    // Return buffered messages from a previous read first
-    if (length(pending_rx) > 0) {
-        return shift(pending_rx);
-    }
-    const data = s.recv(2048);
-    if (!data) {
-        closeSocket();
+    const inst = backends[backendName];
+    if (!inst) {
         return null;
     }
-    if (cfg.backend?.type === "kiss_tcp") {
-        const frames = kissUnframe(data);
-        for (let i = 0; i < length(frames); i++) {
-            const cmd = ord(frames[i], 0) & 0x0f;
-            if (cmd === 0) {
-                const line = parseAx25(substr(frames[i], 1));
-                const msg = receiveLine(line);
-                if (msg) {
-                    push(pending_rx, msg);
-                }
-            }
-        }
-    }
-    else {
-        rxbuf += data;
-        const lines = split(rxbuf, "\n");
-        rxbuf = pop(lines);
-        for (let i = 0; i < length(lines); i++) {
-            const msg = receiveLine(lines[i]);
-            if (msg) {
-                push(pending_rx, msg);
-            }
-        }
-    }
-    return length(pending_rx) > 0 ? shift(pending_rx) : null;
+    return recvFromBackend(inst);
 };
 
 export function send(msg)
 {
-    if (!enabled || !msg?.data?.text_message || msg.namekey !== cfg.channel) {
+    if (!enabled || !msg?.data?.text_message) {
         return;
+    }
+    // Only process messages on channels we know about
+    const bn = resolveBackendName(msg.namekey);
+    if (msg.namekey !== cfg.channel && !channelBackendMap[msg.namekey]) {
+        // Check if it's a DM channel with our key
+        const parts = split(msg.namekey, " ", 2);
+        if (!(channelKey && parts[1] === channelKey)) {
+            return;
+        }
     }
     const p = parseOutboundText(msg.data.text_message);
     if (p.dst) {
-        sendOne(p.dst, p.text);
+        sendOne(bn, p.dst, p.text);
     }
     else if (p.dsts) {
         if (p.join) {
-            putGroup(p.group, p.dsts);
+            groups.putGroup(p.group, p.dsts, { backend: p.backend });
         }
-        sendList(p.dsts, p.text, null, cfg.inline_max_members ?? 10);
+        const g = groups.getGroup(p.group);
+        const gbn = resolveGroupBackendName(g, msg.namekey);
+        sendList(gbn, p.dsts, p.text, null, cfg.inline_max_members ?? 10);
     }
     else {
-        sendGroup(getGroup(p.group), p.text, null);
+        sendGroup(groups.getGroup(p.group), p.text, null, msg.namekey);
     }
 };
 
 export function tick()
 {
-    // Drain any buffered messages from a previous multi-message read
-    while (length(pending_rx) > 0) {
-        const msg = shift(pending_rx);
-        if (msg) {
-            router.queue(msg);
+    for (let name in backends) {
+        const inst = backends[name];
+        while (length(inst.pending_rx) > 0) {
+            const msg = shift(inst.pending_rx);
+            if (msg) {
+                router.queue(msg);
+            }
         }
     }
 };
+
 export function process(msg)
 {
     if (!enabled || !node.fromMe(msg) || !msg?.data?.text_message) {
         return;
     }
-    if (msg.namekey === cfg.channel) {
-        // Message on the main APRS channel – use normal send logic
+    if (msg.namekey === cfg.channel || channelBackendMap[msg.namekey]) {
         send(msg);
         return;
     }
-    // Check for DM channels sharing the APRS channel key (e.g. "kj6dzb-4 og==")
+    // Check for DM channels sharing the APRS channel key
     const parts = split(msg.namekey, " ", 2);
     if (channelKey && parts[1] === channelKey) {
         const dst = normcall(parts[0]);
         if (dst) {
-            // Strip @callsign prefix when it matches the DM destination
             let text = trim(msg.data.text_message ?? "");
             const m = match(text, /^@([A-Za-z0-9-]+)\s+(.+)$/s);
             if (m && normcall(m[1]) === dst) {
                 text = m[2];
             }
-            sendOne(dst, text);
+            const bn = resolveBackendName(msg.namekey);
+            sendOne(bn, dst, text);
+        }
+    }
+};
+
+// Return list of backend names for UI
+export function getBackendNames()
+{
+    return keys(backends);
+};
+
+// Update channel→backend binding at runtime (called when UI saves channels)
+export function updateChannelBackend(namekey, backendName)
+{
+    if (backendName && backends[backendName]) {
+        channelBackendMap[namekey] = backendName;
+    }
+    else {
+        delete channelBackendMap[namekey];
+    }
+};
+
+// Send a message to all members of an APRS group (called from commands.uc /join)
+export function sendToGroup(g, text, namekey)
+{
+    if (!enabled || !g) {
+        return;
+    }
+    const bn = resolveGroupBackendName(g, namekey);
+    const mems = g.members ?? [];
+    for (let i = 0; i < length(mems); i++) {
+        const m = normcall(mems[i]);
+        if (m) {
+            sendOne(bn, m, text);
         }
     }
 };
