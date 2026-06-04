@@ -136,6 +136,16 @@ function makeShortName(longname)
     }
 }
 
+// Auto-scale font size so text fits inside a circle of the given diameter.
+// Uses 70% of diameter as usable width (inscribed region) and ~0.6em average char width.
+function circleFontSize(text, diameter)
+{
+    const maxFont = diameter * 0.28;           // default max ≈ 14px for 50px circle
+    const usable  = diameter * 0.70;           // usable horizontal span inside circle
+    const fitted  = usable / (text.length * 0.6);
+    return Math.min(maxFont, Math.max(8, Math.round(fitted))) + "px";
+}
+
 function nodeExpand(node)
 {
     node.colors = nodeColors(node.num);
@@ -179,7 +189,7 @@ function htmlNode(node)
         filtered = true;
     }
     return `<div id="${node.num}" class="node ${node.platform} ${rightSelection === namekey ? 'selected' : ''}" ${filtered ? 'style="display:none"' : ''} data-namekey="${namekey}" data-filter="${filter}" onclick="showNamekey('${namekey}')">
-        <div class="s" style="color:${node.colors.fcolor};background-color:${node.colors.bcolor}">${node.short_name}</div>
+        <div class="s" style="color:${node.colors.fcolor};background-color:${node.colors.bcolor};font-size:${circleFontSize(node.short_name, 50)}">${node.short_name}</div>
         ${node.platform ? '<div class="logo"></div>' : ''}
         <div class="m">
             <div class="l">${node.long_name}</div>
@@ -203,7 +213,7 @@ function htmlNodeDetail(node)
     }
     return `<div class="node-detail">
         <div class="node ${node.platform}">
-            <div class="s" style="color:${node.colors.fcolor};background-color:${node.colors.bcolor}">${node.short_name}</div>
+            <div class="s" style="color:${node.colors.fcolor};background-color:${node.colors.bcolor};font-size:${circleFontSize(node.short_name, 50)}">${node.short_name}</div>
             ${node.platform ? '<div class="logo"></div>' : ''}
             <div class="m">
                 <div class="l">${node.long_name}<div class="star ${node.favorite}" onclick="toggleFav(event,${node.num})"></div></div>
@@ -289,7 +299,7 @@ function htmlText(text, useimage)
     return `<div id="${text.id}" class="text ${n.num != me.num ? '' : 'me ' + me.align} ${n.platform ?? ''}">
         ${reply}
         <div>
-            <div class="s" style="color:${n.colors.fcolor};background-color:${n.colors.bcolor}">${n.short_name}</div>
+            <div class="s" style="color:${n.colors.fcolor};background-color:${n.colors.bcolor};font-size:${circleFontSize(n.short_name, 46)}">${n.short_name}</div>
             ${n.platform ? '<div class="logo"></div>' : ''}
             <div class="c">
                 <div class="l">${T(n.long_name)}<div>&nbsp;${new Date(1000 * text.when).toLocaleString()}</div></div>
