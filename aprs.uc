@@ -718,18 +718,21 @@ export function getBackendNames()
     return out;
 };
 
-// Update channel→backend binding at runtime (called when UI saves channels)
+// Update channel→backend binding at runtime
+//   backendName = "name"  → bind to specific backend
+//   backendName = ""      → explicitly clear binding (UI cleared it)
+//   backendName = null    → not specified, bind to default if not already bound
 export function updateChannelBackend(namekey, backendName)
 {
     if (backendName && backends[backendName]) {
         channelBackendMap[namekey] = backendName;
     }
-    else if (backendName === null || backendName === "") {
-        // Explicitly cleared — remove binding
+    else if (backendName === "") {
+        // Explicitly cleared by UI
         delete channelBackendMap[namekey];
     }
     else if (!channelBackendMap[namekey] && defaultBackendName) {
-        // No explicit backend but not clearing — bind to default
+        // Not specified (null) — bind to default
         channelBackendMap[namekey] = defaultBackendName;
     }
 };
