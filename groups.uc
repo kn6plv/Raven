@@ -139,9 +139,9 @@ export function parseJoinArgs(args)
             backendName = bm[1];
             continue;
         }
-        // Callsign: 1-6 alphanumeric, optional -SSID
+        // Callsign: 1-6 alphanumeric with at least one digit, optional -SSID
         const cleaned = replace(trim(tok), /,$/, "");
-        if (match(cleaned, /^[A-Za-z0-9]{1,6}(-[0-9]{1,2})?$/)) {
+        if (match(cleaned, /^[A-Za-z0-9]{2,6}(-[0-9]{1,2})?$/) && match(cleaned, /[0-9]/)) {
             push(mems, normcall(cleaned));
             continue;
         }

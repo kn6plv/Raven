@@ -34,10 +34,28 @@ let defaultBackendName = null;
 // Channel → backend name mapping (namekey → backendName)
 const channelBackendMap = {};
 
+function backendTypeLabel(btype)
+{
+    switch (btype ?? "aprsis") {
+        case "aprsis":   return "aprs-is";
+        case "kiss_tcp": return "aprs-kiss";
+        case "tcp_text":
+        case "xastir":
+        case "yaac":     return "aprs-tnc";
+        default:         return "aprs";
+    }
+};
+
+function makeBackendDisplayName(name, bcfg)
+{
+    return `${backendTypeLabel(bcfg?.type)}[${name}]`;
+};
+
 function createBackendInstance(name, bcfg)
 {
     return {
         name: name,
+        displayName: makeBackendDisplayName(name, bcfg),
         config: bcfg,
         socket: null,
         rxbuf: "",
@@ -46,7 +64,7 @@ function createBackendInstance(name, bcfg)
         reconnect_delay: RECONNECT_BASE_MS,
         pending_rx: []
     };
-}
+};
 
 function closeBackendSocket(inst)
 {
@@ -406,7 +424,7 @@ function parseInlineRecipients(rest)
         if (!tok) {
             continue;
         }
-        if (!match(tok, /^[A-Za-z0-9]{1,6}(-[0-9]{1,2})?$/)) {
+        if (!(match(tok, /^[A-Za-z0-9]{2,6}(-[0-9]{1,2})?$/) && match(tok, /[0-9]/))) {
             break;
         }
         push(dsts, normcall(tok));
@@ -471,7 +489,7 @@ function connectBackend(name, inst)
     const port = b.port ?? (btype === "kiss_tcp" ? 8001 : 14580);
     inst.socket = socket.create(socket.AF_INET, socket.SOCK_STREAM, 0);
     if (!inst.socket || inst.socket.connect({ address: host, port: port }) === null) {
-        DEBUG0("aprs[%s]: connect %s:%d failed (retry in %ds): %s\n", name, host, port, inst.reconnect_delay / 1000, socket.error());
+        DEBUG0("%s: connect %s:%d failed (retry in %ds): %s\n", inst.displayName, host, port, inst.reconnect_delay / 1000, socket.error());
         closeBackendSocket(inst);
         inst.reconnect_after = t + inst.reconnect_delay;
         inst.reconnect_delay = min(inst.reconnect_delay * 2, RECONNECT_MAX_MS);
@@ -487,7 +505,7 @@ function connectBackend(name, inst)
             inst.socket.send(`# filter ${b.filter}\r\n`);
         }
     }
-    DEBUG0("aprs[%s]: connected %s:%d type=%s\n", name, host, port, btype);
+    DEBUG0("%s: connected %s:%d\n", inst.displayName, host, port);
 }
 
 function recvFromBackend(inst)
@@ -591,7 +609,7 @@ export function shutdown()
     }
 };
 
-// Returns array of { socket, name } for router to poll
+// Returns array of { socket, name, displayName } for router to poll
 export function handle()
 {
     const handles = [];
@@ -599,7 +617,7 @@ export function handle()
         const inst = backends[name];
         connectBackend(name, inst);
         if (inst.socket) {
-            push(handles, { socket: inst.socket, name: name });
+            push(handles, { socket: inst.socket, name: name, displayName: inst.displayName });
         }
     }
     return length(handles) > 0 ? handles : null;
@@ -684,10 +702,14 @@ export function process(msg)
     }
 };
 
-// Return list of backend names for UI
+// Return list of backend info for UI: [ { key, label }, ... ]
 export function getBackendNames()
 {
-    return keys(backends);
+    const out = [];
+    for (let name in backends) {
+        push(out, { key: name, label: backends[name].displayName });
+    }
+    return out;
 };
 
 // Update channel→backend binding at runtime (called when UI saves channels)

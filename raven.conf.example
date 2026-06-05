@@ -9,7 +9,6 @@
     "aprs": {
         "enabled": false,
         "callsign": "KJ6DZB-10",
-        "channel": "APRS og==",
         "default_group": "APRSgroup1",
         "inline_max_members": 10,
         "backends": {
@@ -43,7 +42,6 @@
     "messages": {},
     "channels": [
         { "namekey": "AREDN og==", "telemetry": false },
-        { "namekey": "APRS og==", "telemetry": false, "backend": "aprsis1" },
         { "namekey": "LongFast AQ==", "telemetry": true, "meshtastic": true }
     ],
     "telemetry": {

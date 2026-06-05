@@ -333,7 +333,9 @@ function backendOptions(selected)
     let opts = `<option value=""${!selected ? ' selected' : ''}>(default)</option>`;
     for (let i = 0; i < aprsBackends.length; i++) {
         const b = aprsBackends[i];
-        opts += `<option value="${b}"${selected === b ? ' selected' : ''}>${b}</option>`;
+        const key = b.key || b;
+        const label = b.label || b;
+        opts += `<option value="${key}"${selected === key ? ' selected' : ''}>${label}</option>`;
     }
     return opts;
 }

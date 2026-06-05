@@ -79,6 +79,16 @@ Removes the channel from the sidebar and deletes the APRS group if one exists fo
 
 Shows all configured APRS groups, their members, backend bindings, and repeat mode.
 
+### /backends — List configured APRS backends
+
+```
+/backends
+```
+
+Shows all configured APRS backends with their name and type. Each entry displays the backend key and a label indicating its type (e.g. `aprs-is[aprsis1]`, `aprs-kiss[direwolf1]`, `aprs-tnc[xastir1]`).
+
+Useful for verifying which backends are active and finding the correct name for `backend=NAME` in `/join` commands.
+
 ### /channels — Channel management
 
 ```
@@ -90,6 +100,23 @@ Shows all configured APRS groups, their members, backend bindings, and repeat mo
 ```
 
 The `/channels join` and `/channels leave` commands are the original channel management commands. The newer `/join` and `/leave` commands are recommended for most use — they handle both channels and APRS groups in one step.
+
+---
+
+## AREDN-Only Channels
+
+Channels prefixed with `%` (instead of `#`) are **AREDN-only** — they travel exclusively over the AREDN mesh network and are never bridged to Meshtastic or MeshCore.
+
+| Prefix | Key | Bridges to | Use case |
+|--------|-----|-----------|----------|
+| `#Name` | SHA-256 derived | Meshtastic + MeshCore + AREDN | General mesh chat |
+| `%Name` | `og==` (unencrypted) | AREDN only | APRS groups, Part 97 compliant |
+
+ARSDN-only channels use the key `og==` (a single-byte default key), which means no encryption. This is required for amateur radio compliance.
+
+**Why APRS groups are always AREDN-only:** FCC Part 97 prohibits encrypting amateur radio traffic. Because APRS is Part 97 amateur radio, APRS group messages must never be bridged to Meshtastic or MeshCore channels (which use encryption). When you create a group with `/join #TacNet KN6PLV KJ6DZB msg`, Raven automatically converts the channel to `%TacNet og==` even though you typed `#`.
+
+A plain `/join #Name` (no callsigns) creates a shared-key encrypted channel that bridges across all three networks. Only when callsigns are added does the channel get forced to AREDN-only.
 
 ---
 

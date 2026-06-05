@@ -254,6 +254,29 @@ export function post(cmd, id)
         }
 
         // -------------------------------------------------------
+        // /backends
+        // -------------------------------------------------------
+        case "backends":
+        {
+            if (!aprs.enabled) {
+                event.queue({ cmd: "/reply", reply: [ "APRS is not enabled" ], socket: id });
+                break;
+            }
+            const bes = aprs.getBackendNames();
+            if (length(bes) === 0) {
+                event.queue({ cmd: "/reply", reply: [ "No APRS backends configured" ], socket: id });
+            }
+            else {
+                const reply = [ "APRS backends:", "&nbsp;" ];
+                for (let i = 0; i < length(bes); i++) {
+                    push(reply, `<b>${bes[i].key}</b> &mdash; ${bes[i].label}`);
+                }
+                event.queue({ cmd: "/reply", reply: reply, socket: id });
+            }
+            break;
+        }
+
+        // -------------------------------------------------------
         // /help
         // -------------------------------------------------------
         case "help":
@@ -266,6 +289,7 @@ export function post(cmd, id)
                 "<b>/join</b> #name backend=NAME CALL1 msg &mdash; APRS group on a specific backend",
                 "<b>/leave</b> #name &mdash; leave channel and remove APRS group",
                 "<b>/groups</b> &mdash; list all APRS groups and members",
+                "<b>/backends</b> &mdash; list configured APRS backends",
                 "&nbsp;",
                 "<b>/channels</b> &mdash; list public channels on local network",
                 "<b>/channels</b> world &mdash; list public channels across the mesh",
