@@ -90,7 +90,7 @@ function checkPendingConnect(name, inst)
     if (!inst.connecting || !inst.socket) {
         return;
     }
-    const t = now() * 1000;
+    const t = time() * 1000;
     // Check if socket is writable (connect completed)
     const err = inst.socket.getopt(socket.SOL_SOCKET, socket.SO_ERROR);
     if (err === 0) {
