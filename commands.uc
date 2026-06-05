@@ -74,7 +74,7 @@ function currentChannelsAsSettings()
     });
 }
 
-export function post(cmd, id)
+export function post(cmd, id, namekey)
 {
     switch (cmd[0]) {
         // -------------------------------------------------------
@@ -299,7 +299,6 @@ export function post(cmd, id)
                 break;
             }
 
-            const namekey = cmd._namekey;
             if (!namekey) {
                 event.queue({ cmd: "/reply", reply: [ "No channel selected" ], socket: id });
                 break;

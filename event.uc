@@ -347,8 +347,7 @@ export function tick()
                 }
                 case "/cmd":
                 {
-                    msg.command._namekey = msg.namekey;
-                    commands.post(msg.command, msg.socket);
+                    commands.post(msg.command, msg.socket, msg.namekey);
                     break;
                 }
                 case "/reply":
