@@ -55,7 +55,7 @@ export function putGroup(name, dsts, opts)
     if (opts?.backend) {
         g.backend = opts.backend;
     }
-    if (opts?.repeat_member_messages !== null && opts?.repeat_member_messages !== undefined) {
+    if (opts?.repeat_member_messages != null) {
         g.repeat_member_messages = opts.repeat_member_messages;
     }
     return g;
