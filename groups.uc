@@ -182,9 +182,8 @@ export function createGroupChannel(name, arednOnly)
     let key;
 
     if (arednOnly || ord(name, 0) === 37) {
-        // AREDN-only: %Name og==
-        // If name starts with #, convert to %
-        chanName = (ord(name, 0) === 35) ? "%" + substr(name, 1) : name;
+        // AREDN-only: use og== key (unencrypted)
+        // Keep the user's original name — the og== key is what marks it AREDN-only
         key = "og==";
     }
     else {
