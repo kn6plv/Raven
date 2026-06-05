@@ -175,7 +175,7 @@ function htmlChannel(channel)
     const nk = channel.namekey.split(" ");
     return `<div class="channel ${rightSelection === channel.namekey ? "selected" : ""}" data-namekey="${channel.namekey}" onclick="showNamekey('${channel.namekey}')">
         <div class="n">
-            <div class="t">${channel.meshtastic ? "Meshtastic" : nk[0]}</div>
+            <div class="t">${channel.meshtastic ? "Meshtastic" : nk[0].replace(/^[#%]/, '')}</div>
         </div>
         <div class="unread">${channel.state.count > 0 ? channel.state.count : ''}</div>
     </div>`;
