@@ -62,9 +62,55 @@ function createBackendInstance(name, bcfg)
         kiss_rxbuf: "",
         reconnect_after: 0,
         reconnect_delay: RECONNECT_BASE_MS,
-        pending_rx: []
+        pending_rx: [],
+        connecting: false,
+        connect_deadline: 0
     };
 };
+
+function finishConnect(inst, btype, b, host, port)
+{
+    inst.connecting = false;
+    inst.connect_deadline = 0;
+    inst.reconnect_delay = RECONNECT_BASE_MS;
+    inst.reconnect_after = 0;
+    inst.socket.listen();
+    if (btype === "aprsis" || btype === "tcp_text" || btype === "xastir" || btype === "yaac") {
+        const passcode = b.passcode ?? "-1";
+        inst.socket.send(`user ${cfg.callsign} pass ${passcode} vers Raven 0.1\r\n`);
+        if (b.filter) {
+            inst.socket.send(`# filter ${b.filter}\r\n`);
+        }
+    }
+    DEBUG0("%s: connected %s:%d\n", inst.displayName, host, port);
+}
+
+function checkPendingConnect(name, inst)
+{
+    if (!inst.connecting || !inst.socket) {
+        return;
+    }
+    const t = now() * 1000;
+    // Check if socket is writable (connect completed)
+    const err = inst.socket.getopt(socket.SOL_SOCKET, socket.SO_ERROR);
+    if (err === 0) {
+        // Connected successfully
+        const b = inst.config ?? {};
+        const btype = b.type ?? "aprsis";
+        const host = b.host ?? "127.0.0.1";
+        const port = b.port ?? 14580;
+        finishConnect(inst, btype, b, host, port);
+        return;
+    }
+    // Check deadline
+    if (t >= inst.connect_deadline) {
+        DEBUG0("%s: connect timed out (retry in %ds)\n", inst.displayName, inst.reconnect_delay / 1000);
+        closeBackendSocket(inst);
+        inst.connecting = false;
+        inst.reconnect_after = t + inst.reconnect_delay;
+        inst.reconnect_delay = min(inst.reconnect_delay * 2, RECONNECT_MAX_MS);
+    }
+}
 
 function closeBackendSocket(inst)
 {
@@ -476,7 +522,7 @@ function parseOutboundText(text)
 
 function connectBackend(name, inst)
 {
-    if (!enabled || inst.socket) {
+    if (!enabled || inst.socket || inst.connecting) {
         return;
     }
     const t = now() * 1000;
@@ -487,34 +533,30 @@ function connectBackend(name, inst)
     const btype = b.type ?? "aprsis";
     const host = b.host ?? (btype === "aprsis" ? "rotate.aprs2.net" : "127.0.0.1");
     const port = b.port ?? (btype === "kiss_tcp" ? 8001 : 14580);
-    inst.socket = socket.create(socket.AF_INET, socket.SOCK_STREAM, 0);
-    // Set connect timeout to avoid blocking on unreachable hosts
-    const CONNECT_TIMEOUT_SEC = 5;
-    inst.socket.setopt(socket.SOL_SOCKET, socket.SO_SNDTIMEO, CONNECT_TIMEOUT_SEC * 1000);
-    if (!inst.socket || inst.socket.connect({ address: host, port: port }) === null) {
-        DEBUG0("%s: connect %s:%d failed (retry in %ds): %s\n", inst.displayName, host, port, inst.reconnect_delay / 1000, socket.error());
+    inst.socket = socket.create(socket.AF_INET, socket.SOCK_STREAM | socket.SOCK_NONBLOCK, 0);
+    if (!inst.socket) {
+        DEBUG0("%s: socket create failed\n", inst.displayName);
+        inst.reconnect_after = t + inst.reconnect_delay;
+        inst.reconnect_delay = min(inst.reconnect_delay * 2, RECONNECT_MAX_MS);
+        return;
+    }
+    const r = inst.socket.connect({ address: host, port: port });
+    if (r === null) {
+        // EINPROGRESS is expected for non-blocking — mark as connecting
+        const err = socket.error();
+        if (index(err, "progress") !== -1 || index(err, "Progress") !== -1) {
+            inst.connecting = true;
+            inst.connect_deadline = t + 10000; // 10s deadline
+            DEBUG0("%s: connecting to %s:%d ...\n", inst.displayName, host, port);
+            return;
+        }
+        DEBUG0("%s: connect %s:%d failed (retry in %ds): %s\n", inst.displayName, host, port, inst.reconnect_delay / 1000, err);
         closeBackendSocket(inst);
         inst.reconnect_after = t + inst.reconnect_delay;
         inst.reconnect_delay = min(inst.reconnect_delay * 2, RECONNECT_MAX_MS);
         return;
     }
-    // Clear timeout for normal operation
-    inst.socket.setopt(socket.SOL_SOCKET, socket.SO_SNDTIMEO, 0);
-    inst.reconnect_delay = RECONNECT_BASE_MS;
-    inst.reconnect_after = 0;
-    inst.socket.listen();
-    if (btype === "aprsis" || btype === "tcp_text" || btype === "xastir" || btype === "yaac") {
-        // APRS-IS login handshake — required for aprsis servers and for
-        // Xastir/YAAC "Server Ports" which emulate APRS-IS tier-two.
-        // Without a valid passcode, Xastir/YAAC accept the connection
-        // but silently drop all injected traffic (read-only mode).
-        const passcode = b.passcode ?? "-1";
-        inst.socket.send(`user ${cfg.callsign} pass ${passcode} vers Raven 0.1\r\n`);
-        if (b.filter) {
-            inst.socket.send(`# filter ${b.filter}\r\n`);
-        }
-    }
-    DEBUG0("%s: connected %s:%d\n", inst.displayName, host, port);
+    finishConnect(inst, btype, b, host, port);
 }
 
 function recvFromBackend(inst)
@@ -624,8 +666,13 @@ export function handle()
     const handles = [];
     for (let name in backends) {
         const inst = backends[name];
-        connectBackend(name, inst);
-        if (inst.socket) {
+        if (inst.connecting) {
+            checkPendingConnect(name, inst);
+        }
+        if (!inst.connecting) {
+            connectBackend(name, inst);
+        }
+        if (inst.socket && !inst.connecting) {
             push(handles, { socket: inst.socket, name: name, displayName: inst.displayName });
         }
     }
