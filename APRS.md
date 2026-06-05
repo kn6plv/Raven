@@ -336,13 +336,14 @@ Local Dire Wolf TNC via KISS-over-TCP. For RF APRS via a local radio.
 
 ### Xastir / YAAC / TCP text
 
-Generic TNC2-format TCP text stream. Works with Xastir, YAAC, or any APRS application that speaks raw TNC2 over TCP.
+TNC2-format TCP text stream. Works with Xastir, YAAC, or any APRS application that exposes a "Server Port" (typically port 2023).
 
 ```json
-"xastir1": {
+"xastir_dzb4": {
   "type": "tcp_text",
-  "host": "127.0.0.1",
-  "port": 14580,
+  "host": "10.237.143.74",
+  "port": 2023,
+  "passcode": "21678",
   "tx_enabled": true
 }
 ```
@@ -351,8 +352,13 @@ Generic TNC2-format TCP text stream. Works with Xastir, YAAC, or any APRS applic
 |-------|-------------|
 | `type` | `"tcp_text"`, `"xastir"`, or `"yaac"` (all equivalent) |
 | `host` | Server host |
-| `port` | Server port |
+| `port` | Server port (Xastir/YAAC default: `2023`) |
+| `passcode` | APRS-IS passcode for the station callsign (**required for TX** — see below) |
 | `tx_enabled` | `true` to transmit |
+
+> **⚠️ Passcode required for transmit:** Xastir and YAAC "Server Ports" emulate an APRS-IS tier-two server. When Raven connects, it performs the standard APRS-IS login handshake (`user CALL pass CODE vers Raven 0.1`). Without a valid passcode, the server accepts the connection but silently drops all injected traffic (read-only mode). The passcode is mathematically derived from your base callsign (without SSID) — use an online APRS passcode calculator or ask your sysop.
+>
+> If passcode is omitted or set to `"-1"`, the connection works for **receive only**.
 
 ## Channel → Backend Binding
 

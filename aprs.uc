@@ -498,7 +498,11 @@ function connectBackend(name, inst)
     inst.reconnect_delay = RECONNECT_BASE_MS;
     inst.reconnect_after = 0;
     inst.socket.listen();
-    if (btype === "aprsis") {
+    if (btype === "aprsis" || btype === "tcp_text" || btype === "xastir" || btype === "yaac") {
+        // APRS-IS login handshake — required for aprsis servers and for
+        // Xastir/YAAC "Server Ports" which emulate APRS-IS tier-two.
+        // Without a valid passcode, Xastir/YAAC accept the connection
+        // but silently drop all injected traffic (read-only mode).
         const passcode = b.passcode ?? "-1";
         inst.socket.send(`user ${cfg.callsign} pass ${passcode} vers Raven 0.1\r\n`);
         if (b.filter) {
