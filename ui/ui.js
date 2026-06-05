@@ -662,6 +662,20 @@ function commandReply(msg)
     t.lastElementChild.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
 }
 
+function downloadExport(msg)
+{
+    const blob = new Blob([msg.data], { type: msg.filename.endsWith(".csv") ? "text/csv" : "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = msg.filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    commandReply({ reply: [ `Exported ${msg.filename}` ] });
+}
+
 function toggleFav(event, nodenum)
 {
     const node = nodes[nodenum];
@@ -1371,6 +1385,9 @@ function startup()
                     break;
                 case "/reply":
                     commandReply(msg);
+                    break;
+                case "/export":
+                    downloadExport(msg);
                     break;
                 case "beat":
                     break;

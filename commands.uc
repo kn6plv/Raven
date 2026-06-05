@@ -7,6 +7,34 @@ import * as node from "node";
 import * as crypto from "crypto.crypto";
 import * as groups from "groups";
 import * as aprs from "aprs";
+import * as nodedb from "nodedb";
+
+function fmtTime(epoch)
+{
+    const t = localtime(epoch ?? time());
+    return sprintf("%04d-%02d-%02d %02d:%02d:%02d", t.year, t.mon, t.mday, t.hour, t.min, t.sec);
+}
+
+function fmtTimeCompact(epoch)
+{
+    const t = localtime(epoch ?? time());
+    return sprintf("%04d%02d%02d-%02d%02d%02d", t.year, t.mon, t.mday, t.hour, t.min, t.sec);
+}
+
+function resolveNodeName(id)
+{
+    if (!id) {
+        return "(unknown)";
+    }
+    const n = nodedb.getNode(id, false);
+    if (n?.nodeinfo?.long_name) {
+        return n.nodeinfo.long_name;
+    }
+    if (n?.nodeinfo?.short_name) {
+        return n.nodeinfo.short_name;
+    }
+    return sprintf("%d", id);
+}
 
 function getPublicChannels()
 {
@@ -256,6 +284,65 @@ export function post(cmd, id)
         }
 
         // -------------------------------------------------------
+        // /export [csv|text]
+        // -------------------------------------------------------
+        case "export":
+        {
+            const format = lc(cmd[1] ?? "text");
+            if (format !== "text" && format !== "csv") {
+                event.queue({ cmd: "/reply", reply: [
+                    "Usage:",
+                    "/export &mdash; export current channel log as plain text",
+                    "/export csv &mdash; export current channel log as CSV",
+                    "/export text &mdash; export current channel log as plain text"
+                ], socket: id });
+                break;
+            }
+
+            const namekey = cmd._namekey;
+            if (!namekey) {
+                event.queue({ cmd: "/reply", reply: [ "No channel selected" ], socket: id });
+                break;
+            }
+
+            const msgs = textmessage.getMessages(namekey);
+            if (!msgs || length(msgs) === 0) {
+                event.queue({ cmd: "/reply", reply: [ "No messages to export" ], socket: id });
+                break;
+            }
+
+            const chanName = split(namekey, " ")[0];
+            const lines = [];
+
+            if (format === "csv") {
+                push(lines, "timestamp,from,message");
+                for (let i = 0; i < length(msgs); i++) {
+                    const m = msgs[i];
+                    const ts = m.when ? fmtTime(m.when) : "";
+                    const from = m.textfrom ?? resolveNodeName(m.from);
+                    // Escape CSV: double-quote fields containing commas, quotes, or newlines
+                    const escaped = replace(replace(m.text ?? "", /"/g, '""'), /\r?\n/g, " ");
+                    push(lines, `"${ts}","${from}","${escaped}"`);
+                }
+            }
+            else {
+                push(lines, `Channel: ${chanName}`);
+                push(lines, `Exported: ${fmtTime()}`);
+                push(lines, "");
+                for (let i = 0; i < length(msgs); i++) {
+                    const m = msgs[i];
+                    const ts = m.when ? fmtTime(m.when) : "";
+                    const from = m.textfrom ?? resolveNodeName(m.from);
+                    push(lines, `[${ts}] ${from}: ${m.text ?? ""}`);
+                }
+            }
+
+            const filename = `${replace(chanName, /^[#%]/, "")}-${fmtTimeCompact()}.${format === "csv" ? "csv" : "txt"}`;
+            event.queue({ cmd: "/export", filename: filename, data: join("\n", lines), socket: id });
+            break;
+        }
+
+        // -------------------------------------------------------
         // /backends (also /backend)
         // -------------------------------------------------------
         case "backend":
@@ -293,6 +380,7 @@ export function post(cmd, id)
                 "<b>/leave</b> #name &mdash; leave channel and remove APRS group",
                 "<b>/groups</b> &mdash; list all APRS groups and members",
                 "<b>/backends</b> &mdash; list configured APRS backends",
+                "<b>/export</b> [csv|text] &mdash; export current channel log as text or CSV",
                 "&nbsp;",
                 "<b>/channels</b> &mdash; list public channels on local network",
                 "<b>/channels</b> world &mdash; list public channels across the mesh",
