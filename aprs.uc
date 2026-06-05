@@ -488,6 +488,9 @@ function connectBackend(name, inst)
     const host = b.host ?? (btype === "aprsis" ? "rotate.aprs2.net" : "127.0.0.1");
     const port = b.port ?? (btype === "kiss_tcp" ? 8001 : 14580);
     inst.socket = socket.create(socket.AF_INET, socket.SOCK_STREAM, 0);
+    // Set connect timeout to avoid blocking on unreachable hosts
+    const CONNECT_TIMEOUT_SEC = 5;
+    inst.socket.setopt(socket.SOL_SOCKET, socket.SO_SNDTIMEO, CONNECT_TIMEOUT_SEC * 1000);
     if (!inst.socket || inst.socket.connect({ address: host, port: port }) === null) {
         DEBUG0("%s: connect %s:%d failed (retry in %ds): %s\n", inst.displayName, host, port, inst.reconnect_delay / 1000, socket.error());
         closeBackendSocket(inst);
@@ -495,6 +498,8 @@ function connectBackend(name, inst)
         inst.reconnect_delay = min(inst.reconnect_delay * 2, RECONNECT_MAX_MS);
         return;
     }
+    // Clear timeout for normal operation
+    inst.socket.setopt(socket.SOL_SOCKET, socket.SO_SNDTIMEO, 0);
     inst.reconnect_delay = RECONNECT_BASE_MS;
     inst.reconnect_after = 0;
     inst.socket.listen();
