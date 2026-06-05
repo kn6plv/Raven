@@ -36,7 +36,9 @@ Show a summary of all available commands.
 
 **Channel-only join** (no callsigns): Creates a shared-key channel using `sha256("#name")` as the encryption key. The channel is usable by Meshtastic, MeshCore, and AREDN. Use `%name` instead of `#name` to create an AREDN-only channel (never bridged to encrypted networks).
 
-**APRS group join** (with callsigns): Creates an AREDN-only channel (`%name og==`) and an APRS callsign group. The message is sent to each listed callsign via the APRS backend. APRS groups are always AREDN-only because APRS is Part 97 amateur radio traffic.
+**APRS group join** (with callsigns): Creates an AREDN-only channel (`#name og==`) and an APRS callsign group. The channel keeps the name you typed but uses the unencrypted `og==` key. The message is sent to each listed callsign via the APRS backend. APRS groups are always AREDN-only because APRS is Part 97 amateur radio traffic. The channel is automatically bound to the default APRS backend so messages typed in the channel are sent to all group members.
+
+**Callsign detection:** Callsigns must contain at least one digit (e.g. `KN6PLV`, `KJ6DZB-4`). Plain words like `radio`, `check`, or `hello` are treated as message text, not callsigns.
 
 The optional `backend=NAME` parameter binds the group (and its channel) to a specific named APRS backend (see [Multi-Backend Configuration](#multi-backend-configuration)).
 
@@ -50,7 +52,7 @@ Creates the channel `#EmComm` with a shared encryption key. Anyone who joins `#E
 ```
 /join #TacNet KN6PLV KJ6DZB-4 radio check
 ```
-Creates AREDN-only channel `%TacNet og==`, creates group `#TacNet` with members KN6PLV and KJ6DZB-4, and sends "radio check" to both via APRS.
+Creates AREDN-only channel `#TacNet og==` (displayed as "TacNet" in the sidebar), creates group `#TacNet` with members KN6PLV and KJ6DZB-4, and sends "radio check" to both via APRS. Plain text typed in this channel is automatically sent to all group members.
 
 ```
 /join #TacNet backend=direwolf1 KN6PLV KJ6DZB-4 radio check
@@ -112,11 +114,13 @@ Channels prefixed with `%` (instead of `#`) are **AREDN-only** — they travel e
 | `#Name` | SHA-256 derived | Meshtastic + MeshCore + AREDN | General mesh chat |
 | `%Name` | `og==` (unencrypted) | AREDN only | APRS groups, Part 97 compliant |
 
-ARSDN-only channels use the key `og==` (a single-byte default key), which means no encryption. This is required for amateur radio compliance.
+AREDN-only channels use the key `og==` (a single-byte default key), which means no encryption. This is required for amateur radio compliance.
 
-**Why APRS groups are always AREDN-only:** FCC Part 97 prohibits encrypting amateur radio traffic. Because APRS is Part 97 amateur radio, APRS group messages must never be bridged to Meshtastic or MeshCore channels (which use encryption). When you create a group with `/join #TacNet KN6PLV KJ6DZB msg`, Raven automatically converts the channel to `%TacNet og==` even though you typed `#`.
+**Why APRS groups are always AREDN-only:** FCC Part 97 prohibits encrypting amateur radio traffic. Because APRS is Part 97 amateur radio, APRS group messages must never be bridged to Meshtastic or MeshCore channels (which use encryption). When you create a group with `/join #TacNet KN6PLV KJ6DZB msg`, Raven uses the `og==` key (unencrypted) regardless of the prefix, keeping the channel name you typed.
 
 A plain `/join #Name` (no callsigns) creates a shared-key encrypted channel that bridges across all three networks. Only when callsigns are added does the channel get forced to AREDN-only.
+
+**Sidebar display:** Channel labels in the UI strip the `#` and `%` prefixes — a channel named `#TacNet og==` appears as "TacNet" in the sidebar.
 
 ---
 
