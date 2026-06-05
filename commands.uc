@@ -78,8 +78,8 @@ export function post(cmd, id)
                     max_members: 10
                 });
 
-                // Bind channel → backend if specified
-                if (parsed.backendName && namekey) {
+                // Bind channel → backend (explicit or default)
+                if (namekey && aprs.enabled) {
                     aprs.updateChannelBackend(namekey, parsed.backendName);
                 }
 

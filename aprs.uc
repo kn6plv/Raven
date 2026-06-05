@@ -660,7 +660,13 @@ export function send(msg)
         sendList(gbn, p.dsts, p.text, null, cfg.inline_max_members ?? 10);
     }
     else {
-        sendGroup(groups.getGroup(p.group), p.text, null, msg.namekey);
+        // If channel corresponds to a group, use it; otherwise fall back to default_group
+        const chanName = split(msg.namekey, " ")[0];
+        let g = groups.getGroup(chanName);
+        if (!g) {
+            g = groups.getGroup(p.group);
+        }
+        sendGroup(g, p.text, null, msg.namekey);
     }
 };
 
@@ -718,8 +724,13 @@ export function updateChannelBackend(namekey, backendName)
     if (backendName && backends[backendName]) {
         channelBackendMap[namekey] = backendName;
     }
-    else {
+    else if (backendName === null || backendName === "") {
+        // Explicitly cleared — remove binding
         delete channelBackendMap[namekey];
+    }
+    else if (!channelBackendMap[namekey] && defaultBackendName) {
+        // No explicit backend but not clearing — bind to default
+        channelBackendMap[namekey] = defaultBackendName;
     }
 };
 
