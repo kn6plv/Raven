@@ -181,6 +181,7 @@ export function post(cmd, id)
                 {
                     const bridge = getBridge();
                     if (bridge) {
+                        event.queue({ cmd: "/reply", reply: [ "Requesting world channels from bridge&hellip;" ], socket: id });
                         router.queue(message.createMessage(bridge, null, null, "command", {
                             id: id,
                             cmd: "get_public_channels"
@@ -189,6 +190,7 @@ export function post(cmd, id)
                         }));
                         break;
                     }
+                    event.queue({ cmd: "/reply", reply: [ "No bridge available &mdash; showing local channels" ], socket: id });
                     // Fall through
                 }
                 case "local":
@@ -254,8 +256,9 @@ export function post(cmd, id)
         }
 
         // -------------------------------------------------------
-        // /backends
+        // /backends (also /backend)
         // -------------------------------------------------------
+        case "backend":
         case "backends":
         {
             if (!aprs.enabled) {
@@ -307,6 +310,7 @@ export function post(cmd, id)
         }
 
         default:
+            event.queue({ cmd: "/reply", reply: [ `Unknown command: <b>/${cmd[0]}</b>. Type <b>/help</b> for a list of commands.` ], socket: id });
             break;
     }
 };
@@ -341,6 +345,7 @@ export function process(msg)
                     ...msg.data.command.channels
                 ];
                 event.queue({ cmd: "/reply", reply: reply, socket: msg.data.command.id });
+                break;
             }
             default:
                 break;
