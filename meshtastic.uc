@@ -8,6 +8,7 @@ import * as node from "node";
 import * as nodedb from "nodedb";
 import * as timers from "timers";
 
+
 const ADDRESS = "224.0.0.69";
 const PORT = 4403;
 
@@ -23,6 +24,7 @@ const portnum2Proto = {};
 const proto2Portnum = {};
 const protos = {};
 let router;
+let gatekeeper = null;
 let callsign = null;
 let dirty = false;
 export let enabled = false;
@@ -121,6 +123,12 @@ function decodePacket(pkt)
     msg.hop_limit = 1;
     msg.transport = "meshtastic";
     msg.originating_callsign = callsign;
+
+    if (gatekeeper?.isEnabled() && msg.encrypted) {
+        DEBUG0("gatekeeper: drop encrypted Meshtastic packet from %s\n", msg.from);
+        return null;
+    }
+
     if (!msg.encrypted) {
         return decodePacketData(msg);
     }
@@ -215,6 +223,7 @@ export function setup(config)
 
     callsign = config.callsign;
     router = config.router;
+    gatekeeper = config._gatekeeper;
 
     const address = config.meshtastic.address;
     s = socket.create(socket.AF_INET, socket.SOCK_DGRAM, 0);

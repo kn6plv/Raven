@@ -6,6 +6,7 @@ import * as meship from "meship";
 import * as meshtastic from "meshtastic";
 import * as meshtasticprotobufs from "meshtasticprotobufs";
 import * as meshcore from "meshcore";
+import * as aprs from "aprs";
 import * as websocket from "websocket";
 import * as event from "event";
 
@@ -21,6 +22,8 @@ import * as device from "telemetry_device";
 import * as environmental_weewx from "telemetry_environmental_weewx";
 import * as airquality_purpleair from "telemetry_airquality_purpleair";
 import * as winlink from "winlink";
+import * as gatekeeper from "gatekeeper";
+import * as groups from "groups";
 
 let bconfig;
 let config;
@@ -49,6 +52,9 @@ function update(option)
                 const nchannel = { namekey: channels[i].namekey };
                 if (channels[i].telemetry) {
                     nchannel.telemetry = true;
+                }
+                if (channels[i].backend) {
+                    nchannel.backend = channels[i].backend;
                 }
                 push(nchannels, nchannel);
             }
@@ -151,6 +157,13 @@ export function setup()
     global.platform.mergePlatformConfig(config);
 
     node.setup(config);
+    gatekeeper.setup(config);
+    config._gatekeeper = gatekeeper;
+    router.setGatekeeper(gatekeeper);
+    router.registerApp(gatekeeper);
+
+    groups.setup(config);
+    router.registerApp(groups);
 
     meship.setup(config);
     router.registerApp(meship);
@@ -158,6 +171,8 @@ export function setup()
     router.registerApp(meshtastic);
     meshcore.setup(config);
     router.registerApp(meshcore);
+    aprs.setup(config);
+    router.registerApp(aprs);
     
     event.setup(config);
     global.event = event;
@@ -206,6 +221,7 @@ export function setup()
         DEBUG0("Shutting down\n");
         meshtastic.shutdown();
         meshcore.shutdown();
+        aprs.shutdown();
         meship.shutdown();
         platform.shutdown();
         nodedb.shutdown();

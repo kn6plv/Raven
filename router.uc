@@ -1,17 +1,23 @@
 import * as meshtastic from "meshtastic";
 import * as meshcore from "meshcore";
 import * as meship from "meship";
+import * as aprs from "aprs";
 import * as node from "node";
 import * as nodedb from "nodedb";
 import * as socket from "socket";
 import * as timers from "timers";
 import * as channel from "channel";
 import * as websocket from "websocket";
-
 const MAX_RECENT = 128;
 const recent = [];
 const apps = [];
 const q = [];
+let gatekeeper = null;
+
+export function setGatekeeper(gk)
+{
+    gatekeeper = gk;
+};
 
 export function registerApp(app)
 {
@@ -106,22 +112,28 @@ export function process()
                 }
             }
             if (tomeshcore) {
-                try {
-                    DEBUG1("Send Meshcore: %.2J\n", msg);
-                    meshcore.send(msg);
-                }
-                catch (e) {
-                    DEBUG0("meshcore recv: %s\n", e.stacktrace);
+                // When gatekeeper is strict, only bridge text messages outbound
+                if (!gatekeeper?.isEnabled() || msg.data?.text_message) {
+                    try {
+                        DEBUG1("Send Meshcore: %.2J\n", msg);
+                        meshcore.send(msg);
+                    }
+                    catch (e) {
+                        DEBUG0("meshcore recv: %s\n", e.stacktrace);
+                    }
                 }
             }
             // Meshtastic modifies the message so much come last
             if (tomeshtastic) {
-                try {
-                    DEBUG1("Send Meshtastic: %.2J\n", msg);
-                    meshtastic.send(msg);
-                }
-                catch (e) {
-                    DEBUG0("meshtastic recv: %s\n", e.stacktrace);
+                // When gatekeeper is strict, only bridge text messages outbound
+                if (!gatekeeper?.isEnabled() || msg.data?.text_message) {
+                    try {
+                        DEBUG1("Send Meshtastic: %.2J\n", msg);
+                        meshtastic.send(msg);
+                    }
+                    catch (e) {
+                        DEBUG0("meshtastic recv: %s\n", e.stacktrace);
+                    }
                 }
             }
         }
@@ -143,7 +155,18 @@ export function queueId(id)
 
 export function queue(msg)
 {
-    if (msg && queueId(msg.id)) {
+    if (!msg) {
+        return;
+    }
+
+    if (gatekeeper?.isEnabled() && (msg.transport === "meshtastic" || msg.transport === "meshcore")) {
+        msg = gatekeeper.filterInboundBridge(msg);
+        if (!msg) {
+            return;
+        }
+    }
+
+    if (queueId(msg.id)) {
         push(q, msg);
     }
 };
@@ -167,6 +190,12 @@ export function tick()
     const mc = meshcore.handle();
     if (mc) {
         push(sockets, [ mc, socket.POLLIN, "meshcore" ]);
+    }
+    const aprsh = aprs.handle();
+    if (aprsh) {
+        for (let i = 0; i < length(aprsh); i++) {
+            push(sockets, [ aprsh[i].socket, socket.POLLIN|socket.POLLRDHUP, `aprs:${aprsh[i].name}` ]);
+        }
     }
     const ph = platform.handle();
     if (ph) {
@@ -226,6 +255,21 @@ export function tick()
                 case "platform":
                 {
                     platform.handleChanges();
+                    break;
+                }
+                default:
+                {
+                    // Handle aprs:backendName tags
+                    const tag = v[i][2];
+                    if (tag && substr(tag, 0, 5) === "aprs:") {
+                        const backendName = substr(tag, 5);
+                        try {
+                            queue(aprs.recv(backendName));
+                        }
+                        catch (e) {
+                            DEBUG0("aprs[%s] recv: %s\n%s\n", backendName, e, e.stacktrace);
+                        }
+                    }
                     break;
                 }
             }

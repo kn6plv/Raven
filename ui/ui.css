@@ -454,7 +454,10 @@ a
     align-items: center;
     justify-content: center;
     border-radius: 25px;
-    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    overflow: hidden;
+    white-space: nowrap;
 }
 .node .m
 {
@@ -530,11 +533,13 @@ a
     min-width: 46px;
     height: 46px;
     margin: auto 0;
-    font-size: 12px;
     border-radius: 23px;
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    font-weight: bold;
+    text-align: center;
+    white-space: nowrap;
 }
 .text .c
 {
@@ -745,6 +750,10 @@ a
 {
     width: 44px;
     justify-content: center;
+}
+.config .b .ct div:nth-child(8)
+{
+    width: 120px;
 }
 .config .b .c
 {

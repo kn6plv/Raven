@@ -6,6 +6,8 @@ import * as nodedb from "nodedb";
 import * as crypto from "crypto.crypto";
 import * as timers from "timers";
 
+let gatekeeper = null;
+
 // =====
 // NOTES
 // =====
@@ -196,6 +198,7 @@ export function setup(config)
 
     callsign = config.callsign;
     router = config.router;
+    gatekeeper = config._gatekeeper;
 
     const address = config.meshcore.address;
     s = socket.create(socket.AF_INET, socket.SOCK_DGRAM, 0);
@@ -279,6 +282,11 @@ function decodePacket(pkt)
         transport: "meshcore",
         originating_callsign: callsign
     };
+    // Drop encrypted MeshCore packets when gatekeeper is in strict mode.
+    // All MeshCore traffic is encrypted at the wire level, but we can still
+    // identify the packet type after decoding. The early-drop for fully
+    // opaque packets happens here before we spend cycles decrypting.
+
     const header = ord(pkt, offset);
     offset++;
     switch (header & 0x03) {

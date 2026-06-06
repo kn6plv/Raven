@@ -13,6 +13,7 @@ let dropSelection;
 let replyid;
 let activeFilter;
 let winlink = null;
+let aprsBackends = [];
 let activityTimeout;
 let catchupTimeout;
 let focusid = null;
@@ -136,6 +137,16 @@ function makeShortName(longname)
     }
 }
 
+// Auto-scale font size so text fits inside a circle of the given diameter.
+// Uses 85% of diameter as usable width and ~0.6em average char width.
+function circleFontSize(text, diameter)
+{
+    const maxFont = diameter * 0.28;           // default max ≈ 14px for 50px circle
+    const usable  = diameter * 0.85;           // usable horizontal span inside circle
+    const fitted  = usable / (text.length * 0.6);
+    return Math.min(maxFont, Math.max(8, Math.round(fitted))) + "px";
+}
+
 function nodeExpand(node)
 {
     node.colors = nodeColors(node.num);
@@ -164,7 +175,7 @@ function htmlChannel(channel)
     const nk = channel.namekey.split(" ");
     return `<div class="channel ${rightSelection === channel.namekey ? "selected" : ""}" data-namekey="${channel.namekey}" onclick="showNamekey('${channel.namekey}')">
         <div class="n">
-            <div class="t">${channel.meshtastic ? "Meshtastic" : nk[0]}</div>
+            <div class="t">${channel.meshtastic ? "Meshtastic" : nk[0].replace(/^[#%]/, '')}</div>
         </div>
         <div class="unread">${channel.state.count > 0 ? channel.state.count : ''}</div>
     </div>`;
@@ -179,7 +190,7 @@ function htmlNode(node)
         filtered = true;
     }
     return `<div id="${node.num}" class="node ${node.platform} ${rightSelection === namekey ? 'selected' : ''}" ${filtered ? 'style="display:none"' : ''} data-namekey="${namekey}" data-filter="${filter}" onclick="showNamekey('${namekey}')">
-        <div class="s" style="color:${node.colors.fcolor};background-color:${node.colors.bcolor}">${node.short_name}</div>
+        <div class="s" style="color:${node.colors.fcolor};background-color:${node.colors.bcolor};font-size:${circleFontSize(node.short_name, 50)}">${node.short_name}</div>
         ${node.platform ? '<div class="logo"></div>' : ''}
         <div class="m">
             <div class="l">${node.long_name}</div>
@@ -203,7 +214,7 @@ function htmlNodeDetail(node)
     }
     return `<div class="node-detail">
         <div class="node ${node.platform}">
-            <div class="s" style="color:${node.colors.fcolor};background-color:${node.colors.bcolor}">${node.short_name}</div>
+            <div class="s" style="color:${node.colors.fcolor};background-color:${node.colors.bcolor};font-size:${circleFontSize(node.short_name, 50)}">${node.short_name}</div>
             ${node.platform ? '<div class="logo"></div>' : ''}
             <div class="m">
                 <div class="l">${node.long_name}<div class="star ${node.favorite}" onclick="toggleFav(event,${node.num})"></div></div>
@@ -289,7 +300,7 @@ function htmlText(text, useimage)
     return `<div id="${text.id}" class="text ${n.num != me.num ? '' : 'me ' + me.align} ${n.platform ?? ''}">
         ${reply}
         <div>
-            <div class="s" style="color:${n.colors.fcolor};background-color:${n.colors.bcolor}">${n.short_name}</div>
+            <div class="s" style="color:${n.colors.fcolor};background-color:${n.colors.bcolor};font-size:${circleFontSize(n.short_name, 46)}">${n.short_name}</div>
             ${n.platform ? '<div class="logo"></div>' : ''}
             <div class="c">
                 <div class="l">${T(n.long_name)}<div>&nbsp;${new Date(1000 * text.when).toLocaleString()}</div></div>
@@ -314,10 +325,29 @@ function htmlCommand(reply)
     </div>`;
 }
 
+function backendOptions(selected)
+{
+    if (!aprsBackends || aprsBackends.length === 0) {
+        return '';
+    }
+    let opts = `<option value=""${!selected ? ' selected' : ''}>(default)</option>`;
+    for (let i = 0; i < aprsBackends.length; i++) {
+        const b = aprsBackends[i];
+        const key = b.key || b;
+        const label = b.label || b;
+        opts += `<option value="${key}"${selected === key ? ' selected' : ''}>${label}</option>`;
+    }
+    return opts;
+}
+
 function htmlChannelConfig()
 {
+    const hasBackends = aprsBackends && aprsBackends.length > 0;
     const body = echannels.map((e, i) => {
         const ne = echannels[i + 1] || {};
+        const backendSelect = hasBackends
+            ? `<select onchange="typeChannelBackend(${i}, event.target.value)">${backendOptions(e.backend)}</select>`
+            : '';
         return `<form class="c">
             <input value="${e.meshtastic ? "Meshtastic" : e.name}" oninput="typeChannelName(${i}, event.target.value)" required minlength="1" maxlength="11" size="11" placeholder="Name" ${e.aredn || e.meshtastic || e.meshcore ? "disabled" : ""} pattern="[^ ]+">
             <input value="${e.meshtastic ? e.name : toDisplayKey(e.key)}" oninput="typeChannelKey(${i}, event.target)" required minlength="4" maxlength="43" size="43" placeholder="ID or Key" ${e.aredn || e.meshtastic || e.meshcore || (e.name[0] === "#" || e.name[0] === "%") ? "disabled" : ""}>
@@ -345,6 +375,7 @@ function htmlChannelConfig()
                 <option disabled>-- MeshCore --</option>
                 <option>Primary</option>
             </select>
+            ${backendSelect}
             <button onclick="rmChannel(${i})" ${e.aredn ? "disabled" : ""}>-</button>
             <button onclick="addChannel(${i})">+</button>
         </form>`;
@@ -359,6 +390,8 @@ function htmlChannelConfig()
                 <div>Notify</div>
                 <div>Images</div>
                 <div>Winlink</div>
+                <div></div>
+                ${hasBackends ? '<div>Backend</div>' : ''}
             </div>
             ${body}
         </div>
@@ -482,6 +515,9 @@ function updateChannels(msg)
 {
     if (msg) {
         channels = msg.channels;
+        if (msg.aprs_backends) {
+            aprsBackends = msg.aprs_backends;
+        }
     }
     I("channels").innerHTML = channels.map(c => htmlChannel(c)).join("");
     updateTitle();
@@ -626,6 +662,20 @@ function commandReply(msg)
     t.lastElementChild.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
 }
 
+function downloadExport(msg)
+{
+    const blob = new Blob([msg.data], { type: msg.filename.endsWith(".csv") ? "text/csv" : "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = msg.filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    commandReply({ reply: [ `Exported ${msg.filename}` ] });
+}
+
 function toggleFav(event, nodenum)
 {
     const node = nodes[nodenum];
@@ -734,6 +784,11 @@ function resetPost(clearContent)
         }
         w.style.display = winlink && cstate.winlink ? null : "none";
         i.style.display = cstate.images ? null : "none";
+    }
+    else if (rightSelection && rightSelection.indexOf("APRS ") === 0) {
+        t.placeholder = "@CALLSIGN message  or  #group message ...";
+        w.style.display = "none";
+        i.style.display = "none";
     }
     else {
         t.placeholder = "Message ...";
@@ -857,7 +912,7 @@ function downloadImage()
 
 function addChannel(idx)
 {
-    echannels.splice(idx + 1, 0, { name: "", key: "og==", max: 100, badge: true, images: true, telemetry: false, winlink: false });
+    echannels.splice(idx + 1, 0, { name: "", key: "og==", max: 100, badge: true, images: true, telemetry: false, winlink: false, backend: "" });
     I("texts").innerHTML = htmlChannelConfig();
 }
 
@@ -951,6 +1006,11 @@ function typeChannelWinlink(idx, value)
     echannels[idx].winlink = value;
 }
 
+function typeChannelBackend(idx, value)
+{
+    echannels[idx].backend = value;
+}
+
 function genChannelKey(idx, value)
 {
     function rand() {
@@ -1030,13 +1090,14 @@ function doneChannels()
             if (name.length >= 1 && key && e.max >= 10 && e.max <= 1000) {
                 const namekey = `${name} ${key}`;
                 const channel = getChannel(namekey) || { meshtastic: false, state: { count: 0, cursor: null, max: 100, badge: true, images: true } };
-                channelnames.push({ namekey: namekey, max: e.max, badge: e.badge, images: e.images, telemetry: e.telemetry, winlink: e.winlink });
+                channelnames.push({ namekey: namekey, max: e.max, badge: e.badge, images: e.images, telemetry: e.telemetry, winlink: e.winlink, backend: e.backend || "" });
                 channel.state.max = e.max;
                 channel.state.badge = e.badge;
                 channel.state.images = e.images;
                 channel.state.winlink = e.winlink;
                 channel.telemetry = e.telemetry;
-                nchannels.push({ namekey: namekey, telemetry: channel.telemetry, meshtastic: channel.meshtastic, state: channel.state });
+                channel.backend = e.backend || "";
+                nchannels.push({ namekey: namekey, telemetry: channel.telemetry, meshtastic: channel.meshtastic, backend: channel.backend, state: channel.state });
             }
         }
         catch (_) {
@@ -1171,7 +1232,8 @@ function showNamekey(namekey)
                     badge: c.state.badge,
                     images: useImage(c.namekey),
                     telemetry: c.telemetry,
-                    winlink: c.state.winlink
+                    winlink: c.state.winlink,
+                    backend: c.backend || ""
                 });
             });
             I("texts").innerHTML = htmlChannelConfig();
@@ -1323,6 +1385,9 @@ function startup()
                     break;
                 case "/reply":
                     commandReply(msg);
+                    break;
+                case "/export":
+                    downloadExport(msg);
                     break;
                 case "beat":
                     break;
