@@ -37,3 +37,7 @@ export function process(msg)
         nodedb.updateDeviceMetrics(msg.from, msg.data.telemetry.device_metrics);
     }
 };
+
+export function cmd(msg, reply)
+{
+};

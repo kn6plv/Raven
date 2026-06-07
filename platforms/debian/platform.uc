@@ -102,6 +102,10 @@ function path(name)
 {
 }
 
+/* export */ function cmd(msg, reply)
+{
+}
+
 /* export */ function handle()
 {
     return null;
@@ -137,6 +141,7 @@ return {
     badge,
     auth,
     tick,
+    cmd,
     process,
     handle,
     handleChanges,

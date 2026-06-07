@@ -64,3 +64,7 @@ export function tick()
 export function process()
 {
 };
+
+export function cmd(msg, reply)
+{
+};

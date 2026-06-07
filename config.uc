@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as router from "router";
 import * as channel from "channel";
+import * as channelcmd from "channelcmd";
 import * as node from "node";
 import * as meship from "meship";
 import * as meshtastic from "meshtastic";
@@ -16,7 +17,6 @@ import * as textmessage from "textmessage";
 import * as position from "position";
 import * as traceroute from "traceroute";
 import * as textstore from "textstore";
-import * as commands from "commands";
 import * as device from "telemetry_device";
 import * as environmental_weewx from "telemetry_environmental_weewx";
 import * as airquality_purpleair from "telemetry_airquality_purpleair";
@@ -182,10 +182,10 @@ export function setup()
     router.registerApp(device);
     channel.setup(config);
     router.registerApp(channel);
+    channelcmd.setup(config);
+    router.registerApp(channelcmd);
     textstore.setup(config);
     router.registerApp(textstore);
-    commands.setup(config);
-    router.registerApp(commands);
 
     if (config.telemetry?.environmental_weewx) {
         environmental_weewx.setup(config);
@@ -226,4 +226,8 @@ export function tick()
     DEBUG1("Tick\n");
     router.tick();
     gc("collect");
+};
+
+export function cmd(msg, reply)
+{
 };

@@ -148,6 +148,12 @@ export function queue(msg)
     }
 };
 
+export function command(msg, reply)
+{
+    for (let i = 0; i < length(apps); i++) {
+        apps[i].cmd(msg, reply);
+    }
+};
 
 export function tick()
 {
@@ -231,4 +237,8 @@ export function tick()
             }
         }
     }
+};
+
+export function cmd(msg, reply)
+{
 };

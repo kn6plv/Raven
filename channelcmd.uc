@@ -1,10 +1,8 @@
-import * as struct from "struct";
 import * as channel from "channel";
 import * as router from "router";
 import * as message from "message";
 import * as textmessage from "textmessage";
 import * as node from "node";
-import * as crypto from "crypto.crypto";
 
 function getPublicChannels()
 {
@@ -36,20 +34,55 @@ function getBridge()
     return null;
 }
 
-export function post(cmd, id)
+export function setup()
 {
+};
+
+export function tick()
+{
+};
+
+export function process(msg)
+{
+    if (msg.data?.command && node.toMe(msg)) {
+        switch (msg.data.command.cmd) {
+            case "get_public_channels":
+            {
+                router.queue(message.createMessage(msg.from, null,null, "command", {
+                    id: msg.data.command.id,
+                    cmd: "reply_public_channels",
+                    channels: getPublicChannels(),
+                }, {
+                    hop_limit: 0
+                }));
+                break;
+            }
+            case "reply_public_channels":
+            {
+                const reply = [
+                    "Public channels on world network:", "&nbsp;",
+                    ...msg.data.command.channels
+                ];
+                event.queue({ cmd: "/reply", reply: reply, socket: msg.data.command.id });
+            }
+            default:
+                break;
+        }
+    }
+};
+
+export function cmd(msg, reply)
+{
+    const cmd = msg.command;
     switch (cmd[0]) {
         case "help":
         {
-            event.queue({ cmd: "/reply", reply: [
-                "Commands:", "&nbsp;",
+            push(reply,
                 "/channels [local] - list channels on local mesh",
                 "/channels world - list channels on all meshes",
                 "/channels join &lt;name&gt; [key] - join named channel (with key if necessary)",
-                "/channels leave &lt;name&gt; - leave named channel",
-                "/help - this help",
-                "&nbsp;", "For more help see the <a target='_blank' href='https://github.com/kn6plv/Raven/wiki'>Raven Wiki</a>"
-            ], socket: id });
+                "/channels leave &lt;name&gt; - leave named channel"
+            );
             break;
         }
         case "channels":
@@ -60,7 +93,7 @@ export function post(cmd, id)
                     const bridge = getBridge();
                     if (bridge) {
                         router.queue(message.createMessage(bridge, null,null, "command", {
-                            id: id,
+                            id: msg.socket,
                             cmd: "get_public_channels"
                         }, {
                             hop_limit: 0
@@ -71,11 +104,10 @@ export function post(cmd, id)
                 }
                 case "local":
                 {
-                    const reply = [
-                        "Public channels on local network", "&nbsp;",
+                    push(reply,
+                        "Public channels on local network:", "&nbsp;",
                         ...getPublicChannels()
-                    ];
-                    event.queue({ cmd: "/reply", reply: reply, socket: id });
+                    );
                     break;
                 }
                 case "join":
@@ -104,7 +136,7 @@ export function post(cmd, id)
                         });
                         if (join) {
                             event.queue({ cmd: "newchannels", channels: [ ...currchannels, newchannel ] });
-                            event.queue({ cmd: "/reply", reply: [ `Joined channel ${name}` ], socket: id });
+                            push(reply, `Joined channel ${name}`);
                         }
                     }
                     break;
@@ -120,7 +152,7 @@ export function post(cmd, id)
                         });
                         if (length(currchannels) !== length(newchannels)) {
                             event.queue({ cmd: "newchannels", channels: newchannels });
-                            event.queue({ cmd: "/reply", reply: [ `Left channel ${name}` ], socket: id });
+                            push(reply, `Left channel ${name}`);
                         }
                     }
                     break;
@@ -131,42 +163,5 @@ export function post(cmd, id)
         }
         default:
             break;
-    }
-};
-
-export function setup(config)
-{
-};
-
-export function tick()
-{
-};
-
-export function process(msg)
-{
-    if (msg.data?.command && node.toMe(msg)) {
-        switch (msg.data.command.cmd) {
-            case "get_public_channels":
-            {
-                router.queue(message.createMessage(msg.from, null,null, "command", {
-                    id: msg.data.command.id,
-                    cmd: "reply_public_channels",
-                    channels: getPublicChannels(),
-                }, {
-                    hop_limit: 0
-                }));
-                break;
-            }
-            case "reply_public_channels":
-            {
-                const reply = [
-                    "Public channels on world network", "&nbsp;",
-                    ...msg.data.command.channels
-                ];
-                event.queue({ cmd: "/reply", reply: reply, socket: msg.data.command.id });
-            }
-            default:
-                break;
-        }
     }
 };

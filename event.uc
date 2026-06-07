@@ -8,7 +8,6 @@ import * as textmessage from "textmessage";
 import * as textstore from "textstore";
 import * as router from "router";
 import * as winlink from "winlink";
-import * as commands from "commands";
 
 const MAXNODES = 1000;
 const MAXNODESSAFARI = 400;
@@ -340,7 +339,17 @@ export function tick()
                 }
                 case "/cmd":
                 {
-                    commands.post(msg.command, msg.socket);
+                    const reply = [];
+                    router.command(msg, reply);
+                    if (length(reply)) {
+                        if (msg.command[0] === "help") {
+                            push(reply, "/help - this help");
+                            sort(reply);
+                            unshift(reply, "Commands:", "&nbsp;");
+                            push(reply, "&nbsp;", "For more help see the <a target='_blank' href='https://github.com/kn6plv/Raven/wiki'>Raven Wiki</a>");
+                        }
+                        send({ event: "/reply", reply: reply }, msg.socket);
+                    }
                     break;
                 }
                 case "/reply":
@@ -365,5 +374,9 @@ export function tick()
 };
 
 export function process(msg)
+{
+};
+
+export function cmd(msg, reply)
 {
 };

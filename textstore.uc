@@ -229,3 +229,7 @@ export function shutdown()
         saveToPlatform();
     }
 };
+
+export function cmd(msg, reply)
+{
+};

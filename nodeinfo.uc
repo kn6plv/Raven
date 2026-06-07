@@ -138,3 +138,7 @@ export function process(msg)
         nodedb.updatePath(msg.from, msg.data.returned_path);
     }
 };
+
+export function cmd(msg, reply)
+{
+};

@@ -205,3 +205,7 @@ export function process(msg)
         saveNode(n);
     }
 };
+
+export function cmd(msg, reply)
+{
+};

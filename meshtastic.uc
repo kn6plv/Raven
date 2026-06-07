@@ -359,3 +359,7 @@ export function tick()
 export function process(msg)
 {
 };
+
+export function cmd(msg, reply)
+{
+};

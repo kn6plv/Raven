@@ -533,6 +533,10 @@ function refreshTargets()
 {
 }
 
+/* export */ function cmd(msg, reply)
+{
+};
+
 /* export */ function handle()
 {
     return watcher;
@@ -584,6 +588,7 @@ return {
     badge,
     auth,
     tick,
+    cmd,
     process,
     handle,
     handleChanges,

@@ -49,3 +49,7 @@ export function process(msg)
         nodedb.updateAirQualityMetrics(msg.from, msg.data.telemetry.airquality_metrics);
     }
 };
+
+export function cmd(msg, reply)
+{
+};
