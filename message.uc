@@ -1,6 +1,7 @@
 import * as math from "math";
 import * as node from "node";
 import * as channel from "channel";
+import * as version from "version";
 
 const DEFAULT_PRIORITY = 64;
 const ACK_PRIORITY = 120;
@@ -20,6 +21,8 @@ export function createMessage(to, from, namekey, type, payload, extra)
         hop_limit: hops,
         transport: "native",
         originating_callsign: callsign,
+        version: version.version,
+        repo: version.repo,
         data: {
             [type]: payload
         }
