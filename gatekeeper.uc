@@ -36,7 +36,12 @@ function loadAllowed(list)
 
 export function setup(config)
 {
-    const gk = config.strict_gatekeeper ?? {};
+    let raw = config.strict_gatekeeper ?? {};
+    // Accept both object and array-of-one-object config formats
+    if (type(raw) === "array") {
+        raw = raw[0] ?? {};
+    }
+    const gk = raw;
     strict_enabled = !!gk.enabled;
     gateway_callsign = norm(gk.gateway_callsign ?? config.callsign);
     loadAllowed(gk.allowed_callsigns ?? config.allowed_callsigns);
