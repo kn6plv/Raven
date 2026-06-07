@@ -39,6 +39,19 @@ function getBridge()
 export function post(cmd, id)
 {
     switch (cmd[0]) {
+        case "help":
+        {
+            event.queue({ cmd: "/reply", reply: [
+                "Commands:", "&nbsp;",
+                "/channels [local] - list channels on local mesh",
+                "/channels world - list channels on all meshes",
+                "/channels join &lt;name&gt; [key] - join named channel (with key if necessary)",
+                "/channels leave &lt;name&gt; - leave named channel",
+                "/help - this help",
+                "&nbsp;", "For more help see the <a target='_blank' href='https://github.com/kn6plv/Raven/wiki'>Raven Wiki</a>"
+            ], socket: id });
+            break;
+        }
         case "channels":
         {
             switch (cmd[1] ?? "local") {
