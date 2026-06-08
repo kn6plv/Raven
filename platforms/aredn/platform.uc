@@ -5,6 +5,7 @@ import * as services from "aredn.services";
 import * as babel from "aredn.babel";
 import * as node from "../../node.uc";
 import * as channel from "../../channel.uc";
+import * as version from "../../version.uc";
 
 const CURL = "/usr/bin/curl";
 
@@ -394,6 +395,8 @@ function orderStores()
     myid = me.id;
     const info = {
         id: myid,
+        version: version.version,
+        repo: version.repo,
         ip: ucdata.main_ip,
         private_key: me.private_key,
         channels: map(channels, c => c.namekey)
