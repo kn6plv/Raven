@@ -2,6 +2,11 @@
     "debug": 1,
     "role": "client_mute",
     "callsign": "KJ6DZB-10",
+    "strict_gatekeeper": {
+        "enabled": false,
+        "gateway_callsign": "KJ6DZB",
+        "allowed_callsigns": []
+    },
     "meshtastic": {
         "address": "192.168.1.100"
     },
@@ -11,42 +16,4 @@
         "callsign": "KJ6DZB-10",
         "default_group": "APRSgroup1",
         "inline_max_members": 10,
-        "backends": {
-            "aprsis1": {
-                "type": "aprsis",
-                "host": "rotate.aprs2.net",
-                "port": 14580,
-                "tx_enabled": false
-            }
-        },
-        "groups": [
-            {
-                "name": "APRSgroup1",
-                "members": [ "KJ6DZB-4", "KJ6DZB-10" ],
-                "repeat_member_messages": false,
-                "rate_limit_seconds": 20,
-                "max_members": 10
-            }
-        ]
-    },
-    "location": {
-        "latitude": 37.000,
-        "longitude": -122.000,
-        "altitude": 10,
-        "precision": 15
-    },
-    "platform_debian": {
-        "store": "/tmp/at"
-    },
-    "maxhops": 7,
-    "messages": {},
-    "channels": [
-        { "namekey": "AREDN og==", "telemetry": false },
-        { "namekey": "LongFast AQ==", "telemetry": true, "meshtastic": true }
-    ],
-    "telemetry": {
-        "environmental_weewx": {
-            "url": "http://weewx.home/current_minimal.json"
-        }
-    }
-}
+        "backends":
