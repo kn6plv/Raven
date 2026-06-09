@@ -13,10 +13,19 @@ const pubTopic = "KN6PLV.raven.v1";
 
 const RESCAN_INTERVAL = 1 * 60; // 1 minute
 const STORE_SORT_TIMEOUT = 10 * 60; // 10 minutes
+const STORAGE_CHECK_INTERVAL = 1 * 60; // 1 minute
+const IMAGE_PRUNE_INTERVAL = 5 * 60; // 5 minutes
 
 const MAX_BINARY_MEM = 0.1; // 10% free ram for binary storage
+const DEFAULT_USB_IMAGE_QUOTA = 64 * 1024 * 1024;
+const DEFAULT_MIN_FREE = 16 * 1024 * 1024;
 
 const LOCATION_SOURCE_INTERNAL = 2;
+
+const INTERNAL_ROOT = "/usr/local/raven";
+const TMP_ROOT = "/tmp/apps/raven";
+const USB_MOUNTPOINT = "/mnt/crow";
+const USB_LABEL = "CROWDATA";
 
 const ucdata = {};
 let bynamekey = {};
@@ -38,26 +47,390 @@ let inShutdown = false;
 let storeSort = 0;
 let ramMessages = false;
 
-/* export */ function setup(config)
+let runtimeConfig = null;
+let storageRoot = INTERNAL_ROOT;
+let imageRoot = `${TMP_ROOT}/images`;
+let degradedRoot = `${TMP_ROOT}/degraded`;
+let storageConf = {};
+let imageQuotaSize = maxBinarySize;
+let minFreeBytes = DEFAULT_MIN_FREE;
+let storageNotice = null;
+let storageState = {
+    mode: "internal",
+    state: "ok",
+    root: INTERNAL_ROOT,
+    image_root: `${TMP_ROOT}/images`,
+    mountpoint: null,
+    reason: null
+};
+
+function mkdirp(p)
 {
-    function mkdirp(p)
-    {
-        const d = fs.dirname(p);
-        if (d && !fs.access(d)) {
-            mkdirp(d);
+    const d = fs.dirname(p);
+    if (d && !fs.access(d)) {
+        mkdirp(d);
+    }
+    fs.mkdir(p);
+}
+
+function trimread(path, fallback)
+{
+    try {
+        return trim(fs.readfile(path));
+    }
+    catch (_) {
+        return fallback;
+    }
+}
+
+function popenread(cmd)
+{
+    const p = fs.popen(cmd);
+    if (!p) {
+        return null;
+    }
+    const out = trim(p.read("all") ?? "");
+    p.close();
+    return out;
+}
+
+function isWritable(dir)
+{
+    try {
+        const p = `${dir}/.crow-storage-test`;
+        fs.writefile(p, "ok");
+        fs.unlink(p);
+        return true;
+    }
+    catch (_) {
+        return false;
+    }
+}
+
+function isMounted(mountpoint)
+{
+    return system(`/bin/mount | /bin/grep -q " on ${mountpoint} "`) === 0;
+}
+
+function bytesFromMb(v, fallback)
+{
+    if (v === null || v === undefined) {
+        return fallback;
+    }
+    return (v + 0) * 1024 * 1024;
+}
+
+function freeBytes(path)
+{
+    const out = popenread(`/bin/df -Pk ${path} 2>/dev/null | /usr/bin/tail -n 1 | /usr/bin/awk '{print $4}'`);
+    return out ? (out + 0) * 1024 : null;
+}
+
+function setStorageState(mode, state, root, image, mountpoint, reason)
+{
+    storageState = {
+        mode: mode,
+        state: state,
+        root: root,
+        image_root: image,
+        mountpoint: mountpoint,
+        reason: reason
+    };
+}
+
+function degraded(reason)
+{
+    storageRoot = degradedRoot;
+    imageRoot = `${TMP_ROOT}/images`;
+    mkdirp(`${storageRoot}/data`);
+    mkdirp(`${storageRoot}/winlink/forms`);
+    mkdirp(imageRoot);
+    setStorageState(storageConf?.mode ?? "internal", "degraded", storageRoot, imageRoot, storageConf?.mountpoint ?? USB_MOUNTPOINT, reason);
+    if (storageNotice !== reason && global.event) {
+        storageNotice = reason;
+        event.notify({ cmd: "/reply", reply: [ `<b>Crow storage degraded:</b> ${reason}`, "Core service is still running from node storage." ] }, `storage-degraded-${reason}`);
+    }
+}
+
+function activateInternalStorage()
+{
+    storageRoot = INTERNAL_ROOT;
+    imageRoot = `${TMP_ROOT}/images`;
+    mkdirp(`${storageRoot}/data`);
+    mkdirp(`${storageRoot}/winlink/forms`);
+    mkdirp(imageRoot);
+    setStorageState("internal", "ok", storageRoot, imageRoot, null, null);
+}
+
+function activateUsbStorage(conf)
+{
+    const mountpoint = conf.mountpoint ?? USB_MOUNTPOINT;
+    mkdirp(mountpoint);
+
+    if (!isMounted(mountpoint)) {
+        if (conf.device) {
+            system(`/bin/mount ${conf.device} ${mountpoint} >/dev/null 2>&1`);
         }
-        fs.mkdir(p);
+        if (!isMounted(mountpoint) && conf.uuid) {
+            system(`/bin/mount UUID=${conf.uuid} ${mountpoint} >/dev/null 2>&1`);
+        }
+        if (!isMounted(mountpoint) && conf.label) {
+            system(`/bin/mount LABEL=${conf.label} ${mountpoint} >/dev/null 2>&1`);
+        }
     }
 
+    if (!isMounted(mountpoint)) {
+        degraded("USB storage is not mounted");
+        return false;
+    }
+    if (!isWritable(mountpoint)) {
+        degraded("USB storage is not writable");
+        return false;
+    }
+    const free = freeBytes(mountpoint);
+    if (free !== null && free < minFreeBytes) {
+        degraded("USB storage free space is below minimum");
+        return false;
+    }
+
+    storageRoot = mountpoint;
+    imageRoot = `${storageRoot}/images`;
+    mkdirp(`${storageRoot}/data`);
+    mkdirp(`${storageRoot}/winlink/forms`);
+    mkdirp(imageRoot);
+    setStorageState("usb", "ok", storageRoot, imageRoot, mountpoint, null);
+    return true;
+}
+
+function configureStorage(config)
+{
+    runtimeConfig = config;
+    storageConf = config.storage ?? {};
+    minFreeBytes = bytesFromMb(storageConf.min_free_mb, DEFAULT_MIN_FREE);
+
+    if (storageConf.image_quota_bytes) {
+        imageQuotaSize = storageConf.image_quota_bytes + 0;
+    }
+    else if (storageConf.image_quota_mb) {
+        imageQuotaSize = bytesFromMb(storageConf.image_quota_mb, DEFAULT_USB_IMAGE_QUOTA);
+    }
+    else {
+        imageQuotaSize = storageConf.mode === "usb" ? DEFAULT_USB_IMAGE_QUOTA : maxBinarySize;
+    }
+
+    if (storageConf.mode === "usb") {
+        activateUsbStorage(storageConf);
+    }
+    else {
+        activateInternalStorage();
+    }
+}
+
+function overridePath()
+{
+    if (fs.access("/etc/raven.conf.override") || fs.access("/etc/raven.conf")) {
+        return "/etc/raven.conf.override";
+    }
+    return `${fs.dirname(SCRIPT_NAME)}/raven.conf.override`;
+}
+
+function persistStorageConfig()
+{
+    let override = {};
+    try {
+        override = json(fs.readfile(overridePath()) ?? "{}");
+    }
+    catch (_) {
+        override = {};
+    }
+    if (type(override) !== "object") {
+        override = {};
+    }
+    override.storage = runtimeConfig.storage;
+    fs.writefile(overridePath(), sprintf("%.2J", override));
+}
+
+function pruneDir(dirname, quota)
+{
+    if (!quota || quota <= 0 || !fs.access(dirname)) {
+        return;
+    }
+    let size = 0;
+    const dir = map(fs.lsdir(dirname), f => {
+        const i = fs.stat(`${dirname}/${f}`);
+        size += i.size;
+        return { f: f, m: i.mtime, s: i.size };
+    });
+    sort(dir, (a, b) => a.m - b.m);
+    for (let i = 0; size > quota && i < length(dir); i++) {
+        size -= dir[i].s;
+        fs.unlink(`${dirname}/${dir[i].f}`);
+    }
+}
+
+function storageHealthCheck()
+{
+    if (storageConf?.mode === "usb") {
+        const mountpoint = storageConf.mountpoint ?? USB_MOUNTPOINT;
+        if (!isMounted(mountpoint)) {
+            degraded("USB storage is not mounted");
+            return false;
+        }
+        if (!isWritable(mountpoint)) {
+            degraded("USB storage is not writable");
+            return false;
+        }
+        const free = freeBytes(mountpoint);
+        if (free !== null && free < minFreeBytes) {
+            pruneDir(`${mountpoint}/images`, imageQuotaSize);
+            if (freeBytes(mountpoint) < minFreeBytes) {
+                degraded("USB storage free space is below minimum");
+                return false;
+            }
+        }
+        if (storageState.state !== "ok") {
+            activateUsbStorage(storageConf);
+        }
+    }
+    return true;
+}
+
+/* export */ function storageStatus()
+{
+    storageHealthCheck();
+    return storageState;
+}
+
+/* export */ function storageScan()
+{
+    const out = [];
+    const blocks = fs.lsdir("/sys/block") ?? [];
+    for (let i = 0; i < length(blocks); i++) {
+        const dev = blocks[i];
+        if (index(dev, "loop") === 0 || index(dev, "ram") === 0 || index(dev, "mtd") === 0 || index(dev, "ubiblock") === 0) {
+            continue;
+        }
+        const removable = trimread(`/sys/block/${dev}/removable`, "0") === "1";
+        if (!removable && index(dev, "sd") !== 0) {
+            continue;
+        }
+        const sectors = trimread(`/sys/block/${dev}/size`, "0") + 0;
+        const model = trimread(`/sys/block/${dev}/device/model`, "");
+        const path = `/dev/${dev}`;
+        push(out, {
+            device: path,
+            model: model,
+            removable: removable,
+            size_bytes: sectors * 512,
+            mounted: system(`/bin/mount | /bin/grep -q "^${path}"`) === 0
+        });
+    }
+    return out;
+}
+
+function isStorageCandidate(device)
+{
+    const candidates = storageScan();
+    for (let i = 0; i < length(candidates); i++) {
+        if (candidates[i].device === device) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* export */ function storageFormat(device, confirm)
+{
+    if (confirm !== "confirm") {
+        return { ok: false, message: "Refusing to format without final 'confirm' argument." };
+    }
+    if (!device || !isStorageCandidate(device)) {
+        return { ok: false, message: "Device is not a removable USB storage candidate." };
+    }
+
+    const mountpoint = USB_MOUNTPOINT;
+    mkdirp(mountpoint);
+    system(`/bin/umount ${device} >/dev/null 2>&1`);
+    system(`/bin/umount ${mountpoint} >/dev/null 2>&1`);
+
+    let rc = system(`/sbin/mkfs.ext4 -F -L ${USB_LABEL} ${device} >/tmp/crow-mkfs.log 2>&1`);
+    if (rc !== 0) {
+        rc = system(`/usr/sbin/mkfs.ext4 -F -L ${USB_LABEL} ${device} >/tmp/crow-mkfs.log 2>&1`);
+    }
+    if (rc !== 0) {
+        return { ok: false, message: "mkfs.ext4 failed; see /tmp/crow-mkfs.log on the node." };
+    }
+    if (system(`/bin/mount ${device} ${mountpoint} >/dev/null 2>&1`) !== 0) {
+        return { ok: false, message: "Formatted drive, but mount failed." };
+    }
+
+    const uuid = popenread(`/sbin/blkid -s UUID -o value ${device} 2>/dev/null`) ?? "";
+    runtimeConfig.storage = {
+        mode: "usb",
+        mountpoint: mountpoint,
+        device: device,
+        uuid: uuid,
+        label: USB_LABEL,
+        image_quota_mb: storageConf.image_quota_mb ?? 64,
+        min_free_mb: storageConf.min_free_mb ?? 16
+    };
+    storageConf = runtimeConfig.storage;
+    configureStorage(runtimeConfig);
+    persistStorageConfig();
+    return { ok: true, message: `USB storage enabled at ${mountpoint}.`, uuid: uuid };
+}
+
+/* export */ function storageMount()
+{
+    if (!runtimeConfig.storage) {
+        runtimeConfig.storage = { mode: "usb", mountpoint: USB_MOUNTPOINT, label: USB_LABEL, image_quota_mb: 64, min_free_mb: 16 };
+    }
+    runtimeConfig.storage.mode = "usb";
+    storageConf = runtimeConfig.storage;
+    const ok = activateUsbStorage(storageConf);
+    persistStorageConfig();
+    return { ok: ok, message: ok ? `USB storage active at ${storageRoot}.` : storageState.reason };
+}
+
+/* export */ function storageDisable()
+{
+    if (!runtimeConfig.storage) {
+        runtimeConfig.storage = {};
+    }
+    runtimeConfig.storage.mode = "internal";
+    storageConf = runtimeConfig.storage;
+    activateInternalStorage();
+    persistStorageConfig();
+    return { ok: true, message: "Crow storage returned to internal node storage." };
+}
+
+/* export */ function storageImageQuota(mb)
+{
+    if (!runtimeConfig.storage) {
+        runtimeConfig.storage = {};
+    }
+    runtimeConfig.storage.image_quota_mb = mb + 0;
+    imageQuotaSize = bytesFromMb(runtimeConfig.storage.image_quota_mb, DEFAULT_USB_IMAGE_QUOTA);
+    pruneDir(imageRoot, imageQuotaSize);
+    persistStorageConfig();
+    return { ok: true, message: `Image quota set to ${runtimeConfig.storage.image_quota_mb} MB.` };
+}
+
+/* export */ function setup(config)
+{
     if (config.messages?.ram) {
         ramMessages = true;
     }
 
-    mkdirp("/usr/local/raven/data");
-    mkdirp("/usr/local/raven/winlink/forms");
-    mkdirp("/tmp/apps/raven/images");
+    const freemem = 1024 * match(fs.readfile("/proc/meminfo"), /MemFree: +(\d+) kB/)[1];
+    const binarymem = freemem * MAX_BINARY_MEM;
+    if (binarymem > maxBinarySize) {
+        maxBinarySize = binarymem;
+    }
+
+    configureStorage(config);
     if (ramMessages) {
-        mkdirp("/tmp/apps/raven/data");
+        mkdirp(`${TMP_ROOT}/data`);
     }
 
     const c = uci.cursor();
@@ -112,11 +485,8 @@ let ramMessages = false;
         meshcoreEnabled = true;
     }
 
-    const freemem = 1024 * match(fs.readfile("/proc/meminfo"), /MemFree: +(\d+) kB/)[1];
-    const binarymem = freemem * MAX_BINARY_MEM;
-    if (binarymem > maxBinarySize) {
-        maxBinarySize = binarymem;
-    }
+    timers.setInterval("storagehealth", STORAGE_CHECK_INTERVAL);
+    timers.setInterval("imageprune", IMAGE_PRUNE_INTERVAL);
 
     if (services.watch) {
         pwatcher = services.watch("publish");
@@ -196,17 +566,16 @@ let ramMessages = false;
 
 function path(name)
 {
-    // Image files are store in ramdisk
     if (index(name, "img") === 0) {
-        return `/tmp/apps/raven/images/${name}`;
+        return `${imageRoot}/${name}`;
     }
     if (index(name, "winlink/") === 0) {
-        return `/usr/local/raven/${name}`;
+        return `${storageRoot}/${name}`;
     }
-    if (ramMessages && index(name, "messages.") === 0) {
-        return `/tmp/apps/raven/data/${replace(name, /\//g, "_")}.json`;
+    if (ramMessages && storageState.state !== "usb" && index(name, "messages.") === 0) {
+        return `${TMP_ROOT}/data/${replace(name, /\//g, "_")}.json`;
     }
-    return `/usr/local/raven/data/${replace(name, /\//g, "_")}.json`;
+    return `${storageRoot}/data/${replace(name, /\//g, "_")}.json`;
 }
 
 /* export */ function load(name)
@@ -247,7 +616,9 @@ function path(name)
 
 /* export */ function store(name, data)
 {
+    storageHealthCheck();
     const p = path(name);
+    mkdirp(fs.dirname(p));
     // Keep a copy of the stored file until the new one is written
     if (fs.access(p)) {
         fs.unlink(`${p}~`);
@@ -274,21 +645,17 @@ function path(name)
 
 /* export */ function storebinary(name, data)
 {
+    storageHealthCheck();
     const p = path(name);
-    // Reduce cached files to maxBinarySize
     const dirname = fs.dirname(p);
-    let size = 0;
-    const dir = map(fs.lsdir(dirname), f => {
-        const i = fs.stat(`${dirname}/${f}`);
-        size += i.size;
-        return { f: f, m: i.mtime, s: i.size };
-    });
-    sort(dir, (a, b) => a.m - b.m);
-    for (let i = 0; size > maxBinarySize && i < length(dir); i++) {
-        size -= dir[i].s;
-        fs.unlink(`${dirname}/${dir[i].f}`);
-    }
+    mkdirp(dirname);
     fs.writefile(p, data);
+    if (index(name, "img") === 0) {
+        pruneDir(dirname, imageQuotaSize);
+    }
+    else {
+        pruneDir(dirname, maxBinarySize);
+    }
 }
 
 /* export */ function dirtree(name)
@@ -527,6 +894,12 @@ function refreshTargets()
     if (timers.tick("aredn")) {
         refreshTargets();
     }
+    if (timers.tick("storagehealth")) {
+        storageHealthCheck();
+    }
+    if (timers.tick("imageprune")) {
+        pruneDir(imageRoot, imageQuotaSize);
+    }
 }
 
 /* export */ function process(msg)
@@ -588,5 +961,11 @@ return {
     handle,
     handleChanges,
     getMap,
-    canAcceptIPAddress
+    canAcceptIPAddress,
+    storageStatus,
+    storageScan,
+    storageFormat,
+    storageMount,
+    storageDisable,
+    storageImageQuota
 };
