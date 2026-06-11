@@ -306,7 +306,7 @@ Internet-connected APRS server. Most common for receive-only or wide-area APRS m
 | `type` | `"aprsis"` |
 | `host` | APRS-IS server hostname (default: `rotate.aprs2.net`) |
 | `port` | Server port (default: `14580`) |
-| `passcode` | APRS-IS passcode for TX (default: `"-1"` = receive-only) |
+| `passcode` | APRS-IS passcode for TX |
 | `filter` | Optional APRS-IS server-side filter string |
 | `tx_enabled` | `true` to transmit, `false` for receive-only |
 
@@ -343,7 +343,7 @@ TNC2-format TCP text stream. Works with Xastir, YAAC, or any APRS application th
   "type": "tcp_text",
   "host": "10.237.143.74",
   "port": 2023,
-  "passcode": "21678",
+  "passcode": "REPLACE_WITH_APRS_IS_PASSCODE",
   "tx_enabled": true
 }
 ```
