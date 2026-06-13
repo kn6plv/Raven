@@ -274,7 +274,7 @@ function ping()
     for (let i = 1; i < length(allhandles); i++) {
         const r = allhandles[i].send(ping);
         if (r === null) {
-            DEBUG0("websocket:ping error: %s\n", socket.error());
+            DEBUG1("websocket:ping error: %s\n", socket.error());
             close(allhandles[i]);
         }
     }
