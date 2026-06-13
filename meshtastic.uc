@@ -342,7 +342,7 @@ export function send(msg)
                     port: PORT
                 });
                 if (r == null) {
-                    DEBUG0("meshtastic:send error: %s\n", socket.error());
+                    DEBUG1("meshtastic:send error: %s\n", socket.error());
                 }
             }
         }

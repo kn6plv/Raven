@@ -811,7 +811,7 @@ export function send(msg)
                     port: PORT
                 });
                 if (r == null) {
-                    DEBUG0("meshcore:send error: %s\n", socket.error());
+                    DEBUG1("meshcore:send error: %s\n", socket.error());
                 }
             }
         }
