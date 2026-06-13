@@ -156,7 +156,7 @@ function setLocalChannel(config)
 export function getChannelsByMeshtasticHash(hash)
 {
     if (!hash) {
-        return [ meshtasticChannel ];
+        return meshtasticChannel ? [ meshtasticChannel ] : null;
     }
     return channelsByMeshtasticHash[hash];
 };
