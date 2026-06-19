@@ -7,6 +7,7 @@ import * as router from "router";
 import * as utils from "utils";
 
 let enabled = false;
+let messagable = true;
 
 const MAX_MESSAGES = 100;
 const SAVE_INTERVAL = 19 * 60;
@@ -208,6 +209,9 @@ export function setup(config)
 {
     if (config.messages) {
         enabled = true;
+        if (config.unmessagable) {
+            messagable = false;
+        }
         timers.setInterval("textmessages", SAVE_INTERVAL);
         const channels = config.channels;
         if (channels) {
@@ -239,7 +243,7 @@ export function shutdown()
 
 export function isMessagable()
 {
-    return enabled;
+    return enabled && messagable;
 };
 
 export function tick()

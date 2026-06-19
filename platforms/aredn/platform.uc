@@ -84,7 +84,9 @@ let ramMessages = false;
         delete config.meshtastic;
         delete config.meshcore;
         delete config.textstore;
-        delete config.messages;
+        if (config.messages) {
+            config.messages.unmessagable = true;
+        }
     }
 
     if (config.arednmesh) {
