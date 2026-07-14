@@ -570,12 +570,16 @@ function decodePacket(pkt)
 
 function makeNativeMsg(data)
 {
+    DEBUG2("meshcore:recv\n");
     const header = struct.unpack(">HH", data);
     const chksum = struct.unpack(">H", data, length(data) - 2);
     if (header[0] !== 0xC03E || header[1] + 6 !== length(data) || chksum[0] !== fletch16(data, 4, header[1])) {
+        DEBUG2("meshcore:recv bad encap\n");
         return null;
     }
-    return decodePacket(substr(data, 4, length(data) - 6));
+    const msg = decodePacket(substr(data, 4, length(data) - 6));
+    DEBUG2("meshcore:recv - msg %s\n", msg ? "ok" : "bad");
+    return msg;
 }
 
 function makePktHeader(type, path)
