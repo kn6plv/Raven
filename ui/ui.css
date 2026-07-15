@@ -687,6 +687,7 @@ a
     color: var(--name-fg-color) !important;
     background-color: var(--name-bg-color) !important;
     padding: 4px 8px;
+    margin: 0 4px;
     border-radius: 13px;
 }
 .config,
