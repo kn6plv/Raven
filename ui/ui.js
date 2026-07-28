@@ -123,6 +123,9 @@ function nodeColors(n)
 
 function makeShortName(longname)
 {
+    if (!longname) {
+        return "????";
+    }
     if (longname.length <= 4) {
         return longname;
     }
@@ -146,7 +149,13 @@ function nodeExpand(node)
         node.rolename = roles[node.role] ?? "-";
     }
     if (!node.short_name) {
-        node.short_name = makeShortName(node.long_name);
+        if (!node.long_name) {
+            node.long_name = "????";
+            node.short_name = "????";
+        }
+        else {
+            node.short_name = makeShortName(node.long_name);
+        }
     }
     return node;
 }
