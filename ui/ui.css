@@ -401,6 +401,11 @@ a
     font-size: 16px;
     font-weight: bold;
 }
+.channel .t span
+{
+    font-size: 9px;
+    color: var(--config-subtitle-color);
+}
 .channel .s
 {
     display: block;
