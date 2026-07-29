@@ -25,6 +25,7 @@ const protos = {};
 let router;
 let callsign = null;
 let dirty = false;
+let preset = null;
 export let enabled = false;
 
 export function registerProto(name, portnum, decode)
@@ -239,6 +240,10 @@ export function setup(config)
     s.setopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 0);
     s.listen();
 
+    if (config.meshtastic.preset) {
+        preset = `${config.meshtastic.preset} AQ==`;
+    }
+
     loadSharedKeys();
 
     timers.setInterval("meshtastic", SAVE_INTERVAL);
@@ -334,6 +339,10 @@ export function recv()
 export function send(msg)
 {
     if (s !== null) {
+        // If this is to a specific preset which isnt ours, dont forward the message.
+        if (preset && preset !== msg.namekey && channel.isMeshtasticPreset(msg.namekey)) {
+            return;
+        }
         const pkts = makeMeshtasticMsg(msg);
         if (pkts && pkts[0]) {
             for (let i = 0; i < length(pkts); i++) {
