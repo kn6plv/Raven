@@ -859,7 +859,7 @@ function downloadImage()
 
 function addChannel(idx)
 {
-    echannels.splice(idx + 1, 0, { name: "", key: "og==", max: 100, badge: true, images: true, telemetry: false, winlink: false });
+    echannels.splice(idx + 1, 0, { name: "", key: "og==", max: 100, badge: true, images: true, telemetry: null, winlink: false });
     I("texts").innerHTML = htmlChannelConfig();
 }
 
