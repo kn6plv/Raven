@@ -245,6 +245,32 @@ export function updateRemoteNameKeys(namekeys)
     }
 };
 
+export function keyTypes()
+{
+    const presets = {};
+    map(platform.getKnownPresets(), preset => presets[preset] = true);
+    const keys = [
+        { name: "1 byte" },
+        { name: "128 bit" },
+        { name: "256 bit" },
+        { name: "-- AREDN --", disabled: true },
+        { name: "Shared public" },
+        { name: "-- Meshtastic --", disabled: true },
+        { name: "ShortTurbo", disabled: !presets.ShortTurbo },
+        { name: "ShortSlow", disabled: !presets.ShortSlow },
+        { name: "ShortFast", disabled: !presets.ShortFast },
+        { name: "MediumSlow", disabled: !presets.MediumSlow },
+        { name: "MediumFast", disabled: !presets.MediumFast },
+        { name: "LongSlow", disabled: !presets.LongSlow },
+        { name: "LongFast", disabled: !presets.LongFast },
+        { name: "LongMod", disabled: !presets.LongMod },
+        { name: "LongTurbo", disabled: !presets.LongTurbo },
+        { name: "-- MeshCore --", disabled: true },
+        { name: "Primary", disabled: !presets.Primary }
+    ];
+    return keys;
+};
+
 export function isDirect(namekey)
 {
     return index(namekey, "DirectMessages ") === 0;

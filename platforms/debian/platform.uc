@@ -124,6 +124,11 @@ function path(name)
     return true;
 }
 
+/* export */ function getKnownPresets()
+{
+    return [];
+}
+
 return {
     setup,
     shutdown,
@@ -146,5 +151,6 @@ return {
     handle,
     handleChanges,
     getMap,
-    canAcceptIPAddress
+    canAcceptIPAddress,
+    getKnownPresets
 };

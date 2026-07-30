@@ -38,6 +38,8 @@ let maxBinarySize = 1 * 1024 * 1024;
 let inShutdown = false;
 let storeSort = 0;
 let ramMessages = false;
+let meshtasticPreset = null;
+let knownPresets = [];
 
 /* export */ function setup(config)
 {
@@ -110,6 +112,9 @@ let ramMessages = false;
 
     if (config.meshtastic) {
         meshtasticEnabled = true;
+        if (config.meshtastic.preset) {
+            meshtasticPreset = config.meshtastic.preset;
+        }
     }
     if (config.meshcore) {
         meshcoreEnabled = true;
@@ -410,11 +415,8 @@ function orderStores()
         info.bridge = [];
         if (meshtasticEnabled) {
             const mconf = {};
-            for (let i = 0; i < length(channels); i++) {
-                if (channel.isMeshtasticPreset(channels[i].namekey)) {
-                    mconf.preset = split(channels[i].namekey, " ")[0];
-                    break;
-                }
+            if (meshtasticPreset) {
+                mconf.preset = meshtasticPreset;
             }
             push(info.bridge, { meshtastic: mconf });
         }
@@ -482,6 +484,13 @@ function refreshTargets()
     const meshipForwarders = [];
     stores = {};
     hasMeshIpForwarder = false;
+    newPresets = [];
+    if (meshtasticPreset) {
+        push(newPresets, meshtasticPreset);
+    }
+    if (meshcoreEnabled) {
+        push(newPresets, "Primary");
+    }
     for (let i = 0; i < length(published); i++) {
         const service = published[i];
         if (service.id !== myid) {
@@ -502,8 +511,12 @@ function refreshTargets()
                     if (!meshtasticEnabled && b.meshtastic) {
                         push(meshtasticForwarders, service);
                     }
+                    if (b.meshtastic?.preset) {
+                        push(newPresets, b.meshtastic.preset);
+                    }
                     if (!meshcoreEnabled && b.meshcore) {
                         push(meshcoreForwarders, service);
+                        push(newPresets, "Primary");
                     }
                     if (b.meship) {
                         hasMeshIpForwarder = true;
@@ -525,6 +538,11 @@ function refreshTargets()
     channel.updateRemoteNameKeys(keys(bynamekey));
     bridges = uniq([ ...meshtasticForwarders, ...meshcoreForwarders, ...meshipForwarders ]);
     orderStores();
+    newPresets = uniq(newPresets);
+    if (sprintf("%J", newPresets) !== sprintf("%J", knownPresets)) {
+        knownPresets = newPresets;
+        event.queue({ cmd: "keys" });
+    }
 }
 
 /* export */ function tick()
@@ -576,6 +594,11 @@ function refreshTargets()
     return hasMeshIpForwarder || system(`/sbin/ip route show table 20 | grep -q ${address}`) === 0;
 }
 
+/* export */ function getKnownPresets()
+{
+    return knownPresets;
+}
+
 return {
     setup,
     shutdown,
@@ -598,5 +621,6 @@ return {
     handle,
     handleChanges,
     getMap,
-    canAcceptIPAddress
+    canAcceptIPAddress,
+    getKnownPresets
 };

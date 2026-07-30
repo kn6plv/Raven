@@ -17,6 +17,7 @@ let activityTimeout;
 let catchupTimeout;
 let focusid = null;
 let sq = [];
+let keyTypes = [];
 const xdiv = document.createElement("div");
 const maxcount = 1200;
 
@@ -336,23 +337,7 @@ function htmlChannelConfig()
             <div><input ${e.winlink ? "checked" : ""} type="checkbox" oninput="typeChannelWinlink(${i}, event.target.checked)" ${e.meshtastic || e.meshcore ? "disabled" : ""}></div>
             <select onchange="genChannelKey(${i}, event.target.value)" ${e.aredn ? "disabled" : ""}>
                 <option>new key</option>
-                <option>1 byte</option>
-                <option>128 bit</option>
-                <option>256 bit</option>
-                <option disabled>-- AREDN --</option>
-                <option>Shared public</option>
-                <option disabled>-- Meshtastic --</option>
-                <option>ShortTurbo</option>
-                <option>ShortSlow</option>
-                <option>ShortFast</option>
-                <option>MediumSlow</option>
-                <option>MediumFast</option>
-                <option>LongSlow</option>
-                <option>LongFast</option>
-                <option>LongMod</option>
-                <option>LongTurbo</option>
-                <option disabled>-- MeshCore --</option>
-                <option>Primary</option>
+                ${keyTypes}
             </select>
             <button onclick="rmChannel(${i})" ${e.aredn ? "disabled" : ""}>-</button>
             <button onclick="addChannel(${i})">+</button>
@@ -626,6 +611,14 @@ function updateState(msg)
 function updateNodeDetails(node)
 {
     I("rheader").innerHTML = htmlNodeDetail(node);
+}
+
+function updateKeyTypes(msg)
+{
+    keyTypes = [];
+    msg.keys.forEach(key => {
+        keyTypes.push(`<option ${key.disabled ? "disabled": ""}>${key.name}</option>`);
+    });
 }
 
 function commandReply(msg)
@@ -1319,6 +1312,9 @@ function startup()
                     }
                     break;
                 }
+                case "keys":
+                    updateKeyTypes(msg);
+                    break;
                 case "winmenu":
                     if (winlinkMenu(msg)) {
                         resetPost(false);

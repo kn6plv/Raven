@@ -148,6 +148,7 @@ export function tick()
                 {
                     notify({ cmd: "me", socket: msg.socket });
                     notify({ cmd: "channels", socket: msg.socket });
+                    notify({ cmd: "keys", socket: msg.socket });
                     notify({ cmd: "favorites", socket: msg.socket });
                     notify({ cmd: "winmenu", socket: msg.socket });
                     const namekey = channel.getAllLocalChannels()[0].namekey;
@@ -307,6 +308,11 @@ export function tick()
                 case "ack":
                 {
                     send({ event: msg.cmd, id: msg.id });
+                    break;
+                }
+                case "keys":
+                {
+                    send({ event: msg.cmd, keys: channel.keyTypes() });
                     break;
                 }
                 case "winmenu":
