@@ -254,8 +254,8 @@ function htmlText(text, useimage)
             };
         }
     }
-    let plaintext = T(text.text);
     let reply = "";
+    let plaintext = text.text;
     if (text.replyid) {
         const r = texts.findLast(t => t.id == text.replyid);
         if (r) {
@@ -274,6 +274,7 @@ function htmlText(text, useimage)
         }
         reply = `<div class="r"><div>${rs.join(" | ")}</div></div>`;
     }
+    plaintext = T(plaintext);
     let textmsg = null;
     const structuredtext = text.structuredtext && text.structuredtext[0];
     if (structuredtext) {
