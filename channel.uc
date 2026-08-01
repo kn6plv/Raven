@@ -21,6 +21,7 @@ global.channelsByMeshtasticHash = {};
 global.channelsByMeshcoreHash = {};
 global.localChannelByNameKey = {};
 let meshtasticChannel;
+let meshtasticPrimary;
 
 function expandSymmetricKey(key)
 {
@@ -139,9 +140,15 @@ function setLocalChannel(config)
     }
 
     const chan = addMessageNameKey(namekey);
-    if (isMeshtasticPreset(namekey)) {
+    if (nk[0] === meshtasticPrimary) {
         chan.telemetry = true;
         meshtasticChannel = chan;
+    }
+    if (isMeshtasticPreset(namekey)) {
+        chan.telemetry = true;
+        if (!meshtasticChannel) {
+            meshtasticChannel = chan;
+        }
     }
     if (isAREDNPreset(namekey)) {
         chan.telemetry = true;
@@ -278,6 +285,7 @@ export function isDirect(namekey)
 
 export function setup(config)
 {
+    meshtasticPrimary = config?.meshtastic?.primary;
     const channels = config.channels;
     if (channels) {
         for (let i = 0; i < length(channels); i++) {

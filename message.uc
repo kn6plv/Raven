@@ -4,7 +4,7 @@ import * as channel from "channel";
 import * as version from "version";
 
 const DEFAULT_PRIORITY = 64;
-const ACK_PRIORITY = 120;
+const ACK_PRIORITY = 70;
 
 let callsign = null;
 
@@ -42,9 +42,10 @@ export function createMessage(to, from, namekey, type, payload, extra)
     return msg;
 };
 
-export function createAckMessage(msg, reason)
+export function createAckMessage(msg)
 {
-    return createMessage(msg.from, null, msg.namekey, "routing", { error_reason: reason ?? 0, checksum: msg.data?.checksum }, {
+    const namekey = msg.transport === "meshtastic" ? null : msg.namekey;
+    return createMessage(msg.from, null, namekey, "routing", { error_reason: 0 }, {
         priority: ACK_PRIORITY,
         data: {
             request_id: msg.id

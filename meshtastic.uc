@@ -267,7 +267,7 @@ function makeNativeMsg(data)
 function makeMeshtasticMsg(msg)
 {
     let mchannel = null;
-    if (node.isBroadcast(msg)) {
+    if (!sendDirect(msg)) {
         const chan = channel.getChannelByNameKey(msg.namekey);
         if (!chan) {
             return null;
