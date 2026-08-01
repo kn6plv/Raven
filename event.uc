@@ -119,6 +119,7 @@ function fullNode(node)
             case "meshtastic":
                 fnode.public_key = b64enc(nodeinfo.public_key);
                 fnode.hops = node.hops;
+                fnode.preset = nodeinfo.preset;
                 break;
             default:
                 break;

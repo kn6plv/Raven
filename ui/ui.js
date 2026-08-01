@@ -219,6 +219,7 @@ function htmlNodeDetail(node)
                 <div class="l">${node.long_name}<div class="star ${node.favorite}" onclick="toggleFav(event,${node.num})"></div></div>
                 <div class="r"><div>User Id</div><div>${node.id}</div></div>
                 <div class="r"><div>Platform</div><div>${node.platform == "native" ? "AREDN" : node.platform == "meshcore" ? "MeshCore" : "Meshtastic"}</div></div>
+                ${node.platform == "meshtastic" && node.preset ? '<div class="r"><div>Preset</div><div>' + node.preset + '</div></div>' : ''}
                 ${node.public_key ? '<div class="r"><div>Public Key</div><div>' + node.public_key + '</div></div>' : ''}
                 ${hops}
                 ${node.version ? '<div class="r"><div>Version</div><div>' + node.version + '</div></div>' : ''}
