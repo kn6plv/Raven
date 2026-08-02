@@ -79,7 +79,8 @@ function addNamekeyMessage(namekey, msg)
             textfrom: utils.utf8validCopy(msg.data.text_from),
             structuredtext: msg.data.structured_text_message,
             replyid: msg.data.reply_id,
-            checksum: msg.data.checksum
+            checksum: msg.data.checksum,
+            reactionhash: msg.data.reaction_hash
         });
         saveMessages(namekey);
         event.notify({ cmd: "text", namekey: namekey, id: msg.id }, `text ${namekey} ${msg.id}`);

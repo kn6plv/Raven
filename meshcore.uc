@@ -74,6 +74,8 @@ const TEXT_TYPE_PLAIN = 0x00;
 const TEXT_TYPE_CLI = 0x01;
 const TEXT_TYPE_SIGNED = 0x02;
 
+const defaultMeshcorePublicNamekey = "MeshCore izOH6cXN6mrJ5e26oRXNcg==";
+
 let s = null;
 let prefixHash1 = null;
 let prefixHash2 = null;
@@ -90,6 +92,56 @@ const recentKeys = {};
 const pendingAcks = {};
 let dirty = false;
 export let enabled = false;
+
+function utf8ToUtf16(str, utf16, limit)
+{
+    for (let i = 0; i < length(str) && limit > 0; limit--) {
+        const b = ord(str, i);
+        let cp;
+        if (b < 0x80) {
+            cp = b;
+            i += 1;
+        }
+        else if ((b & 0xe0) == 0xc0) {
+            cp = ((b & 0x1f) << 6) | (ord(str, i + 1) & 0x3f);
+            i += 2;
+        }
+        else if ((b & 0xf0) == 0xe0) {
+            cp = ((b & 0x0f) << 12) | ((ord(str, i + 1) & 0x3f) << 6) | (ord(str, i + 2) & 0x3f);
+            i += 3;
+        }
+        else {
+            cp = ((b & 0x07) << 18) | ((ord(str, i + 1) & 0x3f) << 12) | ((ord(str, i + 2) & 0x3f) << 6) | (ord(str, i + 3) & 0x3f);
+            i += 4;
+        }
+        if (cp > 0xffff) {
+            cp -= 0x10000;
+            push(utf16, 0xd800 | (cp >> 10), 0xdc00 | (cp & 0x3ff));
+        }
+        else {
+            push(utf16, cp);
+        }
+    }
+    return utf16;
+}
+
+function reactionHash(utf16)
+{
+    let h = 0;
+
+    for (let u in utf16) {
+        let t = h + u;
+        t = (t + (t << 10)) & 0xffffffff;
+        h = t ^ (t >> 6);
+    }
+
+    h = (h + (h << 3)) & 0xffffffff;
+    h ^= h >> 11;
+    h = (h + (h << 15)) & 0x3fffffff;
+    h = h ? h : 1;
+
+    return sprintf("%04x", h & 0xffff);
+}
 
 function getSharedKey(priv, pub)
 {
@@ -273,6 +325,7 @@ function decodePacket(pkt)
     const msg = {
         from: node.UNKNOWN,
         to: node.UNKNOWN,
+        namekey: defaultMeshcorePublicNamekey,
         // Set the hop_limit to 1 to prevent this from being routed back out to meshcore or meshtastic
         hop_limit: 1,
         data: {},
@@ -538,6 +591,7 @@ function decodePacket(pkt)
                     msg.from = nodedb.getNodeByMeshcoreLongname(fm[0])?.id ?? node.UNKNOWN;
                     msg.data.text_message = rtrim(fm[1], "\u0000");
                     msg.data.text_from = fm[0];
+                    msg.data.reaction_hash = reactionHash(utf8ToUtf16(fm[1], utf8ToUtf16(fm[0], utf8ToUtf16(`${msg.rx_time}`, [], 9999), 9999), 5));
                     return msg;
                 }
             }
