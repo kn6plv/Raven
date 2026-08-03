@@ -35,12 +35,20 @@ export function process()
             apps[i].process(msg);
         }
 
-        // Forward the message if it's not just to me. We never forward encrypted traffic.
+        // Traffic has been handled locally. Work out if we should forward it, and where to send it.
+        // We never forward encrypted traffic.
         if (!node.toMe(msg) && !msg.encrypted) {
             if (!node.fromMe(msg)) {
-                if (!node.canForward()) {
+                // If we dont bridge traffic to anything, just drop it.
+                if (!(meshtastic.enabled || meshcore.enabled || meship.isBridge())) {
                     continue;
                 }
+                // Traffic can pass through a single bridge before being dropped
+                if (msg.bridged) {
+                    continue;
+                }
+                msg.bridged = me;
+                // Drop traffic when the hop limit exhausted
                 msg.hop_limit--;
                 if (msg.hop_limit < 0) {
                     continue;

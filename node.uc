@@ -65,21 +65,6 @@ export function fromUnknown(msg)
     return msg.from == UNKNOWN;
 };
 
-export function canForward()
-{
-    switch (me.role) {
-        case ROLE_CLIENT_MUTE:
-        case ROLE_CLIENT_HIDDEN:
-        case ROLE_TRACKER:
-        case ROLE_LOST_AND_FOUND:
-        case ROLE_SENSOR:
-        case ROLE_COMPANION:
-            return false;
-        default:
-            return true;
-    }
-};
-
 export function hopLimit()
 {
     return maxHops;
