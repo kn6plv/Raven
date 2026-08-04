@@ -47,7 +47,7 @@ export function process()
                 if (msg.bridged) {
                     continue;
                 }
-                msg.bridged = me;
+                msg.bridged = node.id();
                 // Drop traffic when the hop limit exhausted
                 msg.hop_limit--;
                 if (msg.hop_limit < 0) {
