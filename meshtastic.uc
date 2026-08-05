@@ -118,8 +118,6 @@ function decodePacketData(msg)
 function decodePacket(pkt)
 {
     const msg = protobuf.decode(protos, "packet", pkt);
-    // Set the hop_limit to 1 to prevent this from being routed back out to meshtastic or meshcore
-    msg.hop_limit = 1;
     msg.transport = "meshtastic";
     msg.originating_callsign = callsign;
     if (!msg.encrypted) {

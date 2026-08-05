@@ -326,8 +326,6 @@ function decodePacket(pkt)
         from: node.UNKNOWN,
         to: node.UNKNOWN,
         namekey: defaultMeshcorePublicNamekey,
-        // Set the hop_limit to 1 to prevent this from being routed back out to meshcore or meshtastic
-        hop_limit: 1,
         data: {},
         transport: "meshcore",
         originating_callsign: callsign
@@ -382,6 +380,9 @@ function decodePacket(pkt)
     else if (path !== prefix) {
         return null;
     }
+
+    // Calculate the remaining hops
+    msg.hop_limit = int((PAYLOAD_PATHLEN_MASK - (pathinfo & PAYLOAD_PATHLEN_MASK)) / pathlen);
 
     const pkthash = crypto.sha256hash(chr(type) + (type === PAYLOAD_TYPE_TRACE ? struct.pack(">H", pathinfo & PAYLOAD_PATHLEN_MASK) : "") + substr(pkt, offset));
     msg.id = (pkthash[0] << 24) | (pkthash[1] << 16) + (pkthash[2] << 8) + pkthash[3];
