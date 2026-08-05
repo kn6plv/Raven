@@ -307,7 +307,7 @@ function htmlText(text, useimage)
     let reply = "";
     let plaintext = text.text;
     if (text.replyid) {
-        const r = texts.findLast(t => t.id === text.replyid);
+        const r = texts.findLast(t => t.id == text.replyid);
         if (r) {
             reply = `<div class="r"><div>${T(r.text.replace(/\n/g," "))}</div></div>`;
         }
@@ -327,7 +327,7 @@ function htmlText(text, useimage)
     else if (plaintext.indexOf("r:") === 0) {
         const r = plaintext.split(":");
         const icon = reactions[parseInt(r[2], 16)];
-        const rp = texts.findLast(t => t.reactionhash === r[1]);
+        const rp = texts.findLast(t => t.reactionhash == r[1]);
         if (icon) {
             plaintext = icon;
             if (rp) {
