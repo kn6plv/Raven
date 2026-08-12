@@ -78,7 +78,9 @@ export function tick()
         }
     }
     if (timers.tick("advert")) {
-        router.queue(createAdvertMessage());
+        if (channel.hasMeshCorePreset()) {
+            router.queue(createAdvertMessage());
+        }
     }
 };
 

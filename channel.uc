@@ -211,6 +211,11 @@ export function getTelemetryChannels()
     return telemetry;
 };
 
+export function hashMeshCorePreset()
+{
+    return meshcorePublicNamekey in localChannelByNameKey;
+};
+
 export function updateLocalChannels(channels)
 {
     const oldLocalChannelByNameKey = localChannelByNameKey;
