@@ -211,7 +211,7 @@ export function getTelemetryChannels()
     return telemetry;
 };
 
-export function hashMeshCorePreset()
+export function hasMeshCorePreset()
 {
     return meshcorePublicNamekey in localChannelByNameKey;
 };
