@@ -316,6 +316,9 @@ function makeMeshtasticMsg(msg)
         }
         return pkts;
     }
+    if (msg.data.telemetry) {
+        msg.hop_limit = 1;
+    }
     return [ encodePacket(merge({
         rx_snr: 0,
         rx_rssi: 0,
