@@ -12,7 +12,9 @@ let startTime = 0;
 export function setup(config)
 {
     startTime = clock(true)[0];
-    timers.setInterval("device_metrics", 60, config.telemetry?.device?.interval ?? telemetry.DEFAULT_INTERVAL);
+    if (config.telemetry?.device?.enabled) {
+        timers.setInterval("device_metrics", 60, config.telemetry?.device?.interval ?? telemetry.DEFAULT_INTERVAL);
+    }
 };
 
 export function tick()
