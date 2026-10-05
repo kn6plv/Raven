@@ -1,4 +1,5 @@
 import * as struct from "struct";
+import * as crypto from "crypto.crypto";
 import * as channel from "channel";
 import * as router from "router";
 import * as message from "message";
