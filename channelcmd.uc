@@ -1,3 +1,4 @@
+import * as struct from "struct";
 import * as channel from "channel";
 import * as router from "router";
 import * as message from "message";
